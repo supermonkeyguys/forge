@@ -29,3 +29,4 @@ export const useAuthStore = create<AuthState>()((set) => ({
 export const selectToken = (s: AuthState) => s.token
 export const selectUser = (s: AuthState) => s.user
 export const selectIsAuthed = (s: AuthState) => s.token !== null
+export const selectSetToken = (s: AuthState) => s.setToken

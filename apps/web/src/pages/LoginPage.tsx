@@ -1,19 +1,20 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@forge/core'
-
-const MOCK_USER = {
-  id: 'dev-user',
-  email: 'dev@forge.local',
-  name: 'Dev User',
-  createdAt: new Date().toISOString(),
-}
+import { useAuthStore, selectSetToken } from '@forge/core'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const setToken = useAuthStore((s) => s.setToken)
+  const setToken = useAuthStore(selectSetToken)
 
   const handleSkip = () => {
-    setToken('dev-token', MOCK_USER)
+    setToken('dev-token', {
+      id: 'dev-user',
+      email: 'dev@forge.local',
+      name: 'Dev User',
+      createdAt: new Date().toISOString(),
+    })
+    // ProtectedRoute only blocks unauthenticated users from protected routes;
+    // it does not redirect authenticated users away from /login.
+    // We navigate explicitly to push the user to the projects page.
     navigate('/projects')
   }
 

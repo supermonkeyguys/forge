@@ -1,5 +1,5 @@
 // Auth
-export { useAuthStore, selectToken, selectUser, selectIsAuthed } from './auth/auth-store.js'
+export { useAuthStore, selectToken, selectUser, selectIsAuthed, selectSetToken } from './auth/auth-store.js'
 export { useLogin } from './auth/use-login.js'
 
 // Project
