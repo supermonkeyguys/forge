@@ -87,6 +87,10 @@ interface WorkspaceState {
   // ── Waiting state ────────────────────────────────────────────
   waitingReason: string | null
 
+  // ── Agent Service job ─────────────────────────────────────────────
+  agentJobId: string | null
+  setAgentJobId: (jobId: string) => void
+
   // ── Actions ──────────────────────────────────────────────────
   startGeneration: (projectId: string) => void
   setPreviewUrl: (url: string) => void
@@ -118,6 +122,7 @@ const initialState = {
   events: [],
   agentCards: initialCards(),
   waitingReason: null,
+  agentJobId: null,
 }
 
 // ── Store ─────────────────────────────────────────────────────────
@@ -129,6 +134,8 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
   setPhase: (p) => set({ phase: p }),
   setDraftSpec: (d) => set({ draftSpec: d }),
   setConfirmedSpec: (s) => set({ confirmedSpec: s }),
+
+  setAgentJobId: (jobId) => set({ agentJobId: jobId }),
 
   startGeneration: (projectId) =>
     set({ projectId, phase: 'running', agentCards: initialCards(), events: [] }),
@@ -188,3 +195,4 @@ export const selectAgentCards = (s: WorkspaceState) => s.agentCards
 export const selectEvents = (s: WorkspaceState) => s.events
 export const selectOrchestratorState = (s: WorkspaceState) => s.orchestratorState
 export const selectWaitingReason = (s: WorkspaceState) => s.waitingReason
+export const selectAgentJobId = (s: WorkspaceState) => s.agentJobId

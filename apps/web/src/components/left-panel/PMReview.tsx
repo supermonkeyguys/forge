@@ -10,6 +10,8 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useCreateProject } from '@forge/core'
 import {
   useWorkspaceStore,
   selectDraftSpec,
@@ -35,6 +37,9 @@ export function PMReview() {
   const startGeneration = useWorkspaceStore((s) => s.startGeneration)
   const userInput = useWorkspaceStore((s) => s.userInput)
 
+  const { mutate: createProject, isPending: isCreating } = useCreateProject()
+  const navigate = useNavigate()
+
   const [supplement, setSupplement] = useState('')
   const [isStarting, setIsStarting] = useState(false)
 
@@ -51,13 +56,24 @@ export function PMReview() {
     })
   }
 
-  const handleConfirm = async () => {
-    if (selectedCount === 0 || isStarting) return
+  const handleConfirm = () => {
+    if (selectedCount === 0 || isStarting || isCreating) return
     setIsStarting(true)
 
-    // Mock: in production this calls POST /api/v1/projects and gets back a projectId
-    const mockProjectId = `proj-${Date.now()}`
-    startGeneration(mockProjectId)
+    createProject(draft.title || userInput.slice(0, 40), {
+      onSuccess: (result) => {
+        const projectId = result?.data?.id
+        if (!projectId) {
+          setIsStarting(false)
+          return
+        }
+        startGeneration(projectId)
+        navigate(`/projects/${projectId}`)
+      },
+      onError: () => {
+        setIsStarting(false)
+      },
+    })
   }
 
   const handleBack = () => {
@@ -151,21 +167,21 @@ export function PMReview() {
       <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-soft)' }}>
         <button
           onClick={handleConfirm}
-          disabled={selectedCount === 0 || isStarting}
+          disabled={selectedCount === 0 || isStarting || isCreating}
           style={{
             width: '100%',
-            background: selectedCount > 0 && !isStarting ? 'var(--accent)' : 'var(--bg-card)',
-            color: selectedCount > 0 && !isStarting ? '#fff' : 'var(--text-muted)',
+            background: selectedCount > 0 && !isStarting && !isCreating ? 'var(--accent)' : 'var(--bg-card)',
+            color: selectedCount > 0 && !isStarting && !isCreating ? '#fff' : 'var(--text-muted)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             padding: '10px',
             fontSize: 14,
             fontWeight: 500,
-            cursor: selectedCount > 0 && !isStarting ? 'pointer' : 'not-allowed',
+            cursor: selectedCount > 0 && !isStarting && !isCreating ? 'pointer' : 'not-allowed',
             transition: 'all 0.15s',
           }}
         >
-          {isStarting
+          {isStarting || isCreating
             ? '启动中...'
             : `确认并生成 (${selectedCount} 个功能)`
           }
