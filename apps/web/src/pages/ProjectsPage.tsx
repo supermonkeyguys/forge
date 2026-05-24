@@ -1,15 +1,17 @@
 import { useNavigate } from 'react-router-dom'
-import { useProjects } from '@forge/core'
+import { useProjects, useDeleteProject } from '@forge/core'
 import { ProjectCard } from '../components/project-card/project-card.js'
 import { PageShell, EmptyState, LoadingState, ErrorState } from '../components/project-card/project-page-states.js'
 
 export function ProjectsPage() {
   const navigate = useNavigate()
   const { data, isLoading, isError } = useProjects()
+  const { mutate: deleteProject } = useDeleteProject()
   const projects = data?.data ?? []
 
-  const handleDelete = (_id: string) => {
-    // TODO: wire up delete mutation when Go API is ready
+  const handleDelete = (id: string) => {
+    if (!window.confirm('确定删除这个项目？此操作不可撤销。')) return
+    deleteProject(id)
   }
 
   if (isLoading) {
