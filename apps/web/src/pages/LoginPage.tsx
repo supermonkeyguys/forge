@@ -1,21 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore, selectSetToken } from '@forge/core'
+import { useDevLogin } from '@forge/core'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const setToken = useAuthStore(selectSetToken)
+  const { mutate: devLogin, isPending } = useDevLogin()
 
   const handleSkip = () => {
-    setToken('dev-token', {
-      id: 'dev-user',
-      email: 'dev@forge.local',
-      name: 'Dev User',
-      createdAt: new Date().toISOString(),
+    devLogin(undefined, {
+      onSuccess: () => navigate('/projects'),
     })
-    // ProtectedRoute only blocks unauthenticated users from protected routes;
-    // it does not redirect authenticated users away from /login.
-    // We navigate explicitly to push the user to the projects page.
-    navigate('/projects')
   }
 
   return (
@@ -71,6 +64,7 @@ export function LoginPage() {
           />
           <button
             onClick={handleSkip}
+            disabled={isPending}
             style={{
               width: '100%',
               background: 'transparent',
@@ -79,11 +73,12 @@ export function LoginPage() {
               color: 'var(--accent)',
               fontSize: 13,
               padding: '10px 14px',
-              cursor: 'pointer',
+              cursor: isPending ? 'not-allowed' : 'pointer',
               marginTop: 4,
+              opacity: isPending ? 0.6 : 1,
             }}
           >
-            → 跳过登录（开发模式）
+            {isPending ? '登录中...' : '→ 跳过登录（开发模式）'}
           </button>
         </div>
 

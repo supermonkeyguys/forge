@@ -1,6 +1,7 @@
 // Auth
 export { useAuthStore, selectToken, selectUser, selectIsAuthed, selectSetToken } from './auth/auth-store.js'
 export { useLogin } from './auth/use-login.js'
+export { useDevLogin } from './auth/use-dev-login.js'
 
 // Project
 export { useProjects, useProject, useCreateProject } from './project/use-projects.js'
