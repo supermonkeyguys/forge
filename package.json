@@ -1,0 +1,12 @@
+{
+  "name": "forge",
+  "private": true,
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:layer1": "playwright test e2e/layer1",
+    "e2e:layer2": "playwright test e2e/layer2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}
