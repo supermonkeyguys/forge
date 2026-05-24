@@ -24,7 +24,11 @@ export function WorkspacePage() {
   const startGeneration = useWorkspaceStore((s) => s.startGeneration)
   const reset = useWorkspaceStore((s) => s.reset)
 
-  // Sync route param into store when navigating to an existing project
+  // Sync route param into store when navigating to an existing project.
+  // storeProjectId is intentionally excluded from the dep array — the effect
+  // must only fire on route changes, not on every store update.
+  // Known limitation: if reset() is called externally without a route change
+  // (e.g. logout), this effect will not re-fire for the same projectId.
   useEffect(() => {
     if (projectId && projectId !== storeProjectId) {
       startGeneration(projectId)
