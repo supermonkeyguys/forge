@@ -1,14 +1,15 @@
 package handler_test
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/forge-ai/forge/api/api/handler"
 	"github.com/forge-ai/forge/api/domain"
 	"github.com/forge-ai/forge/api/infra/mock"
@@ -16,15 +17,14 @@ import (
 
 func TestProjectHandler_Get_NotFound(t *testing.T) {
 	repo := &mock.ProjectRepo{
-		GetByIDFn: func(_ interface{}, id string) (domain.Project, error) {
+		GetByIDFn: func(_ context.Context, id string) (domain.Project, error) {
 			return domain.Project{}, domain.ErrNotFound
 		},
 	}
 
 	h := handler.NewProjectHandler(repo)
-
 	r := chi.NewRouter()
-	r.Get("/api/v1/projects/{id}", h.Get)
+	r.Get("/api/v1/projects/{projectID}", h.Get)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/nonexistent", nil)
 	w := httptest.NewRecorder()
@@ -34,9 +34,9 @@ func TestProjectHandler_Get_NotFound(t *testing.T) {
 		t.Errorf("expected 404, got %d", w.Code)
 	}
 
-	var body map[string]interface{}
+	var body map[string]any
 	json.NewDecoder(w.Body).Decode(&body)
-	errObj, ok := body["error"].(map[string]interface{})
+	errObj, ok := body["error"].(map[string]any)
 	if !ok {
 		t.Fatal("expected error object in response")
 	}
@@ -66,7 +66,7 @@ func TestProjectHandler_Create_MissingName(t *testing.T) {
 func TestProjectHandler_Get_Success(t *testing.T) {
 	want := domain.Project{ID: "proj-1", Name: "My App", Status: domain.ProjectStatusIdle}
 	repo := &mock.ProjectRepo{
-		GetByIDFn: func(_ interface{}, id string) (domain.Project, error) {
+		GetByIDFn: func(_ context.Context, id string) (domain.Project, error) {
 			if id == "proj-1" {
 				return want, nil
 			}
@@ -76,7 +76,7 @@ func TestProjectHandler_Get_Success(t *testing.T) {
 
 	h := handler.NewProjectHandler(repo)
 	r := chi.NewRouter()
-	r.Get("/api/v1/projects/{id}", h.Get)
+	r.Get("/api/v1/projects/{projectID}", h.Get)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/proj-1", nil)
 	w := httptest.NewRecorder()
@@ -86,14 +86,34 @@ func TestProjectHandler_Get_Success(t *testing.T) {
 		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var body map[string]interface{}
+	var body map[string]any
 	json.NewDecoder(w.Body).Decode(&body)
-	data, ok := body["data"].(map[string]interface{})
+	data, ok := body["data"].(map[string]any)
 	if !ok {
 		t.Fatal("expected data object")
 	}
 	if data["id"] != "proj-1" {
 		t.Errorf("expected id proj-1, got %v", data["id"])
 	}
-	fmt.Println("✓ GET /projects/:id returns project data")
+}
+
+func TestProjectHandler_Delete_NotFound(t *testing.T) {
+	// Delete now calls GetByID first — mock that to return not found.
+	repo := &mock.ProjectRepo{
+		GetByIDFn: func(_ context.Context, id string) (domain.Project, error) {
+			return domain.Project{}, domain.ErrNotFound
+		},
+	}
+
+	h := handler.NewProjectHandler(repo)
+	r := chi.NewRouter()
+	r.Delete("/api/v1/projects/{projectID}", h.Delete)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/projects/no-such-id", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
 }

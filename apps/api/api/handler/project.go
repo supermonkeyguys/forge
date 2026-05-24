@@ -22,14 +22,16 @@ func NewProjectHandler(repo domain.ProjectRepository) *ProjectHandler {
 // GET /api/v1/projects
 func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
+	limit, offset := parsePagination(r)
 
-	projects, err := h.repo.ListByUserID(r.Context(), userID)
+	projects, err := h.repo.ListByUserID(r.Context(), userID, limit, offset)
 	if err != nil {
 		middleware.WriteError(w, err)
 		return
 	}
 
-	middleware.WriteJSONList(w, projects, len(projects), 1, 100)
+	page := (offset / limit) + 1
+	middleware.WriteJSONList(w, projects, len(projects), page, limit)
 }
 
 // POST /api/v1/projects
@@ -61,22 +63,42 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 	middleware.WriteJSON(w, http.StatusCreated, project)
 }
 
-// GET /api/v1/projects/{id}
+// GET /api/v1/projects/{projectID}
 func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "projectID")
+	userID := middleware.UserIDFromContext(r.Context())
 
 	project, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		middleware.WriteError(w, err)
 		return
 	}
+	if project.UserID != userID {
+		middleware.WriteError(w, domain.ErrForbidden)
+		return
+	}
 
 	middleware.WriteJSON(w, http.StatusOK, project)
 }
 
-// DELETE /api/v1/projects/{id}
+// DELETE /api/v1/projects/{projectID}
 func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "projectID")
+	userID := middleware.UserIDFromContext(r.Context())
+
+	project, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	if project.UserID != userID {
+		middleware.WriteError(w, domain.ErrForbidden)
+		return
+	}
+	if project.IsActive() {
+		middleware.WriteError(w, domain.ErrForbidden)
+		return
+	}
 
 	if err := h.repo.Delete(r.Context(), id); err != nil {
 		middleware.WriteError(w, err)
