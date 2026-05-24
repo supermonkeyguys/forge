@@ -1,15 +1,43 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDevLogin } from '@forge/core'
+import { useLogin, useDevLogin, ApiError } from '@forge/core'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { mutate: devLogin, isPending } = useDevLogin()
+  const { mutate: login, isPending: loginPending } = useLogin()
+  const { mutate: devLogin, isPending: devPending } = useDevLogin()
 
-  const handleSkip = () => {
-    devLogin(undefined, {
-      onSuccess: () => navigate('/projects'),
-    })
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+
+  const handleLogin = () => {
+    if (!email || !password) {
+      setError('请输入邮箱和密码')
+      return
+    }
+    setError('')
+    login(
+      { email, password },
+      {
+        onSuccess: () => navigate('/projects'),
+        onError: (err) => {
+          if (err instanceof ApiError && err.status === 401) {
+            setError('邮箱或密码错误')
+          } else {
+            setError('登录失败，请稍后重试')
+          }
+        },
+      },
+    )
   }
+
+  const handleDevLogin = () => {
+    setError('')
+    devLogin(undefined, { onSuccess: () => navigate('/projects') })
+  }
+
+  const isPending = loginPending || devPending
 
   return (
     <div style={{
@@ -19,13 +47,7 @@ export function LoginPage() {
       justifyContent: 'center',
       background: 'var(--bg)',
     }}>
-      <div style={{
-        width: 320,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 24,
-      }}>
+      <div style={{ width: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🔨</div>
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Forge</h1>
@@ -34,36 +56,67 @@ export function LoginPage() {
 
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <input
-            disabled
-            placeholder="邮箱（暂不支持）"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="邮箱"
+            type="email"
+            disabled={isPending}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
             style={{
               width: '100%',
               background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
+              border: `1px solid ${error ? 'var(--red, #ef4444)' : 'var(--border)'}`,
               borderRadius: 'var(--radius)',
-              color: 'var(--text-dim)',
+              color: 'var(--text)',
               fontSize: 13,
               padding: '10px 14px',
-              cursor: 'not-allowed',
+              outline: 'none',
             }}
           />
           <input
-            disabled
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="密码"
             type="password"
-            placeholder="密码（暂不支持）"
+            disabled={isPending}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
             style={{
               width: '100%',
               background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
+              border: `1px solid ${error ? 'var(--red, #ef4444)' : 'var(--border)'}`,
               borderRadius: 'var(--radius)',
-              color: 'var(--text-dim)',
+              color: 'var(--text)',
               fontSize: 13,
               padding: '10px 14px',
-              cursor: 'not-allowed',
+              outline: 'none',
             }}
           />
+
+          {error && (
+            <p style={{ fontSize: 12, color: 'var(--red, #ef4444)', margin: 0 }}>{error}</p>
+          )}
+
           <button
-            onClick={handleSkip}
+            onClick={handleLogin}
+            disabled={isPending}
+            style={{
+              width: '100%',
+              background: 'var(--accent)',
+              border: 'none',
+              borderRadius: 'var(--radius)',
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 500,
+              padding: '10px 14px',
+              cursor: isPending ? 'not-allowed' : 'pointer',
+              opacity: isPending ? 0.7 : 1,
+            }}
+          >
+            {loginPending ? '登录中...' : '登录'}
+          </button>
+
+          <button
+            onClick={handleDevLogin}
             disabled={isPending}
             style={{
               width: '100%',
@@ -71,20 +124,15 @@ export function LoginPage() {
               border: '1px dashed var(--accent)',
               borderRadius: 'var(--radius)',
               color: 'var(--accent)',
-              fontSize: 13,
-              padding: '10px 14px',
+              fontSize: 12,
+              padding: '8px 14px',
               cursor: isPending ? 'not-allowed' : 'pointer',
-              marginTop: 4,
               opacity: isPending ? 0.6 : 1,
             }}
           >
-            {isPending ? '登录中...' : '→ 跳过登录（开发模式）'}
+            {devPending ? '登录中...' : '→ 快速登录（开发模式）'}
           </button>
         </div>
-
-        <p style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center' }}>
-          真实登录将在后端 auth 完成后启用
-        </p>
       </div>
     </div>
   )
