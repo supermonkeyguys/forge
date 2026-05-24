@@ -2,30 +2,32 @@
  * useAgentEvents — subscribes to SSE stream from the Go API.
  * Feeds events directly into the workspace store.
  *
- * Replaces the old hook in hooks/useAgentStream.ts with store integration.
+ * Uses ?token= query param because EventSource API does not support
+ * custom request headers. The backend RequireAuth middleware accepts
+ * both Bearer header and ?token= query param.
  */
 
 import { useEffect } from 'react'
+import { useAuthStore, selectToken } from '@forge/core'
 import { useWorkspaceStore } from '../store/workspace-store.js'
 import type { AgentEvent } from '@forge/core'
 
 export function useAgentEvents(projectId: string | null) {
+  const token = useAuthStore(selectToken)
   const addEvent = useWorkspaceStore((s) => s.addEvent)
   const setPreviewUrl = useWorkspaceStore((s) => s.setPreviewUrl)
   const setWaiting = useWorkspaceStore((s) => s.setWaiting)
 
   useEffect(() => {
-    if (!projectId) return
+    if (!projectId || !token) return
 
-    const url = `/api/v1/projects/${projectId}/stream`
+    const url = `/api/v1/projects/${projectId}/stream?token=${encodeURIComponent(token)}`
     const es = new EventSource(url)
 
     es.addEventListener('agent_event', (e: MessageEvent) => {
       try {
         const event = JSON.parse(e.data) as AgentEvent
         addEvent(event)
-
-        // Handle waiting state
         if (event.type === 'waiting' && event.reason) {
           setWaiting(event.reason)
         }
@@ -43,10 +45,9 @@ export function useAgentEvents(projectId: string | null) {
     })
 
     es.onerror = () => {
-      // Connection lost — will auto-reconnect (SSE default behavior)
-      // If we want explicit reconnect control, we can close and reopen here
+      // SSE auto-reconnects on error — intentional, no action needed
     }
 
     return () => es.close()
-  }, [projectId, addEvent, setPreviewUrl, setWaiting])
+  }, [projectId, token, addEvent, setPreviewUrl, setWaiting])
 }
