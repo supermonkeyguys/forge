@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import type { Project } from '@forge/core'
+import type { Project, ProjectStatus } from '@forge/core'
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<ProjectStatus, string> = {
   done:       '完成',
   building:   '生成中',
   analyzing:  '生成中',
@@ -13,7 +13,7 @@ const STATUS_LABEL: Record<string, string> = {
   idle:       '待机',
 }
 
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_COLOR: Record<ProjectStatus, string> = {
   done:      'var(--green)',
   failed:    'var(--red)',
   waiting:   'var(--yellow)',
@@ -34,8 +34,8 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const navigate = useNavigate()
-  const color = STATUS_COLOR[project.status] ?? 'var(--text-dim)'
-  const label = STATUS_LABEL[project.status] ?? project.status
+  const color = STATUS_COLOR[project.status]
+  const label = STATUS_LABEL[project.status]
 
   return (
     <div style={{
