@@ -101,3 +101,28 @@ export interface AuthToken {
   token: string
   user: User
 }
+
+// ── Task ─────────────────────────────────────────────────────────
+
+export type TaskStatus =
+  | 'idle'
+  | 'analyzing'
+  | 'planning'
+  | 'building'
+  | 'validating'
+  | 'fixing'
+  | 'waiting'
+  | 'done'
+  | 'failed'
+
+export interface Task {
+  id: string
+  projectId: string
+  userId: string
+  prompt: string
+  status: TaskStatus
+  previewUrl: string
+  errorMsg: string
+  createdAt: string
+  updatedAt: string
+}
