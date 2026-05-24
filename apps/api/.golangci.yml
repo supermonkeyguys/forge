@@ -1,0 +1,42 @@
+version: "2"
+
+linters:
+  enable:
+    - depguard      # import 边界强制执行
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - gofmt
+
+linters-settings:
+  depguard:
+    rules:
+      # domain 层：只允许标准库
+      domain-layer:
+        files:
+          - "**/domain/**/*.go"
+        deny:
+          - pkg: "database/sql"
+            desc: "domain/ must not import database/sql — use domain.Repository interface"
+          - pkg: "github.com/jackc/pgx"
+            desc: "domain/ must not import pgx — use domain.Repository interface"
+          - pkg: "github.com/go-chi/chi"
+            desc: "domain/ must not import chi — HTTP belongs in api/"
+          - pkg: "net/http"
+            desc: "domain/ must not import net/http — HTTP belongs in api/"
+
+      # api/handler 层：禁止直接用 infra/postgres 具体类型
+      handler-layer:
+        files:
+          - "**/api/handler/**/*.go"
+        deny:
+          - pkg: "github.com/forge-ai/forge/api/infra/postgres"
+            desc: "api/handler/ must not import infra/postgres directly — use domain.Repository interface"
+
+issues:
+  exclude-rules:
+    # 测试文件豁免部分规则
+    - path: "_test.go"
+      linters:
+        - errcheck

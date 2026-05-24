@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Forge Spec",
+  "description": "Structured requirement spec produced by PM Agent after user review",
+  "type": "object",
+  "required": ["id", "title", "features"],
+  "properties": {
+    "id": { "type": "string" },
+    "title": { "type": "string", "description": "Short app title" },
+    "description": { "type": "string" },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "acceptance_criteria"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "out_of_scope": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "auth": { "type": "boolean" },
+        "database": { "type": "boolean" },
+        "file_upload": { "type": "boolean" },
+        "email": { "type": "boolean" },
+        "payments": { "type": "boolean" }
+      }
+    }
+  }
+}

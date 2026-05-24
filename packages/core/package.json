@@ -1,0 +1,29 @@
+{
+  "name": "@forge/core",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./*": "./*.ts"
+  },
+  "scripts": {
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.3.0",
+    "zustand": "^4.5.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@testing-library/react-hooks": "^8.0.0",
+    "@vitejs/plugin-react": "^4.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0"
+  }
+}

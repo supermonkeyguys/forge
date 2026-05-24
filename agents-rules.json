@@ -1,0 +1,163 @@
+{
+  "version": "1.0.0",
+  "description": "Forge architecture constraint rules injected into every Agent system prompt",
+
+  "frontend_layers": {
+    "core": {
+      "path": "packages/core/",
+      "purpose": "Business logic only. TanStack Query hooks, Zustand stores, pure functions.",
+      "allowed_imports": ["react", "@tanstack/react-query", "zustand", "zod"],
+      "forbidden_imports": ["react-dom", "@forge/ui", "apps/"],
+      "forbidden_patterns": [
+        "localStorage (use StorageAdapter)",
+        "direct fetch/axios outside api/client.ts",
+        "returning objects from Zustand selectors"
+      ],
+      "file_size_limit": null,
+      "test_requirement": "Every file must have a .test.ts. Cover loading/success/error states.",
+      "test_tool": "Vitest (node environment)"
+    },
+    "ui": {
+      "path": "packages/ui/",
+      "purpose": "Pure UI components. No business logic, no API calls, no state management.",
+      "allowed_imports": ["react", "react-dom", "css modules"],
+      "forbidden_imports": ["@forge/core", "zustand", "@tanstack/react-query"],
+      "forbidden_patterns": [
+        "network requests inside components",
+        "Zustand store slice in Props"
+      ],
+      "file_size_limit": null,
+      "test_requirement": "Every component must have at least one Default Storybook story.",
+      "test_tool": "Storybook"
+    },
+    "pages": {
+      "path": "apps/web/src/pages/",
+      "purpose": "Page assembly only. Connect core hooks with ui components.",
+      "allowed_imports": ["@forge/core", "@forge/ui", "react-router-dom"],
+      "forbidden_imports": [],
+      "forbidden_patterns": [
+        "direct fetch/axios",
+        "creating Zustand stores",
+        "business logic (if/else on business state)"
+      ],
+      "file_size_limit": 100,
+      "test_requirement": "Playwright E2E for critical paths only.",
+      "test_tool": "Playwright"
+    }
+  },
+
+  "backend_layers": {
+    "domain": {
+      "path": "apps/api/domain/",
+      "purpose": "Business entities, pure functions, Repository interfaces. Zero framework dependency.",
+      "allowed_imports": ["stdlib only"],
+      "forbidden_imports": ["database/sql", "pgx", "net/http", "chi", "any third-party"],
+      "rules": [
+        "Repository interfaces MUST be defined here, not in infra",
+        "Errors MUST use sentinel vars: var ErrNotFound = errors.New(...)",
+        "No DB calls, no HTTP calls — pure functions only"
+      ],
+      "test_requirement": "90% coverage. No mocks needed — pure functions.",
+      "test_tool": "go test"
+    },
+    "infra": {
+      "path": "apps/api/infra/",
+      "purpose": "Repository implementations, DB access, external service clients.",
+      "allowed_imports": ["domain/", "pgx", "sqlc generated code", "third-party SDKs"],
+      "forbidden_imports": ["api/", "cmd/"],
+      "rules": [
+        "Must implement domain.Repository interfaces",
+        "DB errors (e.g. pgx.ErrNoRows) MUST be converted to domain.Err* before returning",
+        "No business logic — only data access and mapping"
+      ],
+      "test_requirement": "Critical queries 100% (integration build tag, testcontainers).",
+      "test_tool": "go test -tags integration"
+    },
+    "api_handler": {
+      "path": "apps/api/api/",
+      "purpose": "HTTP adapter layer. Parse request → call domain → serialize response.",
+      "allowed_imports": ["domain/ (interfaces only)", "net/http", "chi"],
+      "forbidden_imports": ["infra/postgres (concrete types)"],
+      "rules": [
+        "Handlers only hold domain.Repository interfaces, never concrete infra types",
+        "No business if/else logic in handlers",
+        "All domain error → HTTP status code mapping is in middleware/error.go ONLY",
+        "Handler files must not exceed 60 lines"
+      ],
+      "test_requirement": "80% coverage. Test normal + invalid inputs + error mapping.",
+      "test_tool": "go test + net/http/httptest"
+    },
+    "cmd": {
+      "path": "apps/api/cmd/server/",
+      "purpose": "Dependency injection wiring point ONLY.",
+      "rules": [
+        "Only file allowed to import domain/, infra/, api/ simultaneously",
+        "No business logic — only construction and wiring",
+        "Manual constructor injection (no DI container)"
+      ]
+    }
+  },
+
+  "file_placement_rules": [
+    { "if": "TanStack Query hook or API call",        "must_be_in": "packages/core/" },
+    { "if": "Zustand store",                           "must_be_in": "packages/core/" },
+    { "if": "Pure UI component",                       "must_be_in": "packages/ui/" },
+    { "if": "React page",                              "must_be_in": "apps/web/src/pages/" },
+    { "if": "Go business entity or interface",         "must_be_in": "apps/api/domain/" },
+    { "if": "SQL query file",                          "must_be_in": "apps/api/infra/sqlc/queries/" },
+    { "if": "Go Repository implementation",            "must_be_in": "apps/api/infra/postgres/" },
+    { "if": "Go HTTP handler",                         "must_be_in": "apps/api/api/handler/" },
+    { "if": "Go Router registration",                  "must_be_in": "apps/api/api/router.go" }
+  ],
+
+  "naming_conventions": {
+    "typescript_files": "kebab-case (use-login.ts, auth-store.ts)",
+    "react_components": "kebab-case file, PascalCase export (button.tsx → Button)",
+    "go_files": "snake_case (project_repo.go)",
+    "go_interfaces": "Noun + Repository (ProjectRepository) — no I prefix",
+    "go_errors": "Err + PascalCase (ErrNotFound)",
+    "go_constructors": "New + TypeName, return interface not concrete (NewProjectRepo → ProjectRepository)",
+    "test_files": "same name + .test.ts or _test.go",
+    "sql_files": "{resource}.sql with -- name: VerbNoun :one|:many|:exec"
+  },
+
+  "api_conventions": {
+    "url_pattern": "/api/v1/{plural-noun}",
+    "no_verbs_in_url": true,
+    "success_single": "{ \"data\": { ... } }",
+    "success_list": "{ \"data\": [...], \"total\": N, \"page\": N, \"limit\": N }",
+    "error": "{ \"error\": { \"code\": \"SCREAMING_SNAKE\", \"message\": \"...\" } }",
+    "sse_stream": "GET /api/v1/{resource}/{id}/stream"
+  },
+
+  "task_completion_checklist": {
+    "frontend_feature": [
+      "core hook file created",
+      "core hook test file created (loading/success/error states)",
+      "ui component created if new component needed",
+      "ui component story created",
+      "page file created (assembly only, < 100 lines)"
+    ],
+    "backend_feature": [
+      "domain entity file updated",
+      "domain repository interface updated",
+      "sql query file created",
+      "infra repository implementation created",
+      "infra mock created",
+      "api handler created",
+      "api handler test created",
+      "domain unit test created"
+    ]
+  },
+
+  "forbidden_behaviors": [
+    "Assuming requirements — mark ambiguities in spec.json clarifying_questions",
+    "Generating code without corresponding tests",
+    "Writing business logic in page.tsx",
+    "Writing SQL or HTTP code in domain/",
+    "Importing infra/postgres concrete types in api/handler/",
+    "Using 'as' type assertion on API responses (use parseWithFallback)",
+    "Handler files exceeding 60 lines",
+    "Page files exceeding 100 lines"
+  ]
+}
