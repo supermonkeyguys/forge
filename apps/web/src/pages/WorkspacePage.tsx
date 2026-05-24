@@ -1,63 +1,64 @@
 /**
- * Main workspace — three-column layout:
+ * WorkspacePage — three-column layout.
  *
- * [Conversation + History] | [Agent Collaboration Flow] | [App Preview]
+ * [Left 320px]        [Center flex-1]       [Right 480px]
+ * ConversationPanel   AgentFlowPanel         PreviewPanel
  *
- * This is the core UI where users:
- * 1. Describe their app
- * 2. Review PM Agent's amplified requirements
- * 3. Watch agents collaborate in real-time
- * 4. Preview the generated app
- * 5. Iterate with natural language
+ * projectId comes from the URL param (:id).
+ * When id === 'new', the workspace starts in 'input' phase with no project.
  */
 
+import { useEffect } from 'react'
+import { useParams } from 'react-router-dom'
+import { useAgentEvents } from '../hooks/useAgentEvents.js'
+import { useWorkspaceStore, selectProjectId } from '../store/workspace-store.js'
+import { ConversationPanel } from '../components/left-panel/ConversationPanel.js'
+import { AgentFlowPanel } from '../components/center-panel/AgentFlowPanel.js'
+import { PreviewPanel } from '../components/right-panel/PreviewPanel.js'
+
 export function WorkspacePage() {
+  const { id } = useParams<{ id: string }>()
+  const projectId = id === 'new' ? null : (id ?? null)
+
+  const storeProjectId = useWorkspaceStore(selectProjectId)
+  const startGeneration = useWorkspaceStore((s) => s.startGeneration)
+  const reset = useWorkspaceStore((s) => s.reset)
+
+  // Sync route param into store when navigating to an existing project
+  useEffect(() => {
+    if (projectId && projectId !== storeProjectId) {
+      startGeneration(projectId)
+    }
+    if (!projectId) {
+      reset()
+    }
+  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Connect SSE when a project is active
+  useAgentEvents(storeProjectId)
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr 480px", height: "100vh" }}>
-      {/* Left: Conversation */}
-      <aside>
+    <>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.4; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '320px 1fr 480px',
+        height: '100vh',
+        overflow: 'hidden',
+      }}>
         <ConversationPanel />
-      </aside>
-
-      {/* Center: Agent collaboration visualizer */}
-      <main>
         <AgentFlowPanel />
-      </main>
-
-      {/* Right: Live preview */}
-      <aside>
         <PreviewPanel />
-      </aside>
-    </div>
-  );
-}
-
-// --- Sub-panels (stubs, implemented in Phase 1+) ---
-
-function ConversationPanel() {
-  return (
-    <div>
-      <h2>Forge</h2>
-      {/* TODO: requirement input, PM review UI, iteration history */}
-      <p>Describe what you want to build...</p>
-    </div>
-  );
-}
-
-function AgentFlowPanel() {
-  return (
-    <div>
-      {/* TODO: real-time agent status cards, decisions, file changes */}
-      <p>Agent collaboration will appear here</p>
-    </div>
-  );
-}
-
-function PreviewPanel() {
-  return (
-    <div>
-      {/* TODO: iframe pointing to E2B sandbox preview URL */}
-      <p>App preview will appear here</p>
-    </div>
-  );
+      </div>
+    </>
+  )
 }
