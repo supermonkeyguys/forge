@@ -11,8 +11,8 @@ const TaskSchema = z.object({
   userId: z.string(),
   prompt: z.string(),
   status: z.enum(['idle','analyzing','planning','building','validating','fixing','waiting','done','failed']),
-  previewUrl: z.string(),
-  errorMsg: z.string(),
+  previewUrl: z.string().nullable(),
+  errorMsg: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
