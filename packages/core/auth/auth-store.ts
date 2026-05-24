@@ -3,10 +3,13 @@
  *
  * Rules:
  * - Selectors must return primitives, not objects (prevents infinite renders)
- * - Token is kept in memory only (not localStorage) — persisted via httpOnly cookie
+ * - Token persisted to localStorage via zustand persist middleware
+ * - On page refresh, token is restored automatically; ProtectedRoute still
+ *   checks for token existence before rendering protected pages
  */
 
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { User } from '../types/index.js'
 
 interface AuthState {
@@ -16,14 +19,20 @@ interface AuthState {
   logout: () => void
 }
 
-export const useAuthStore = create<AuthState>()((set) => ({
-  token: null,
-  user: null,
-
-  setToken: (token, user) => set({ token, user }),
-
-  logout: () => set({ token: null, user: null }),
-}))
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      token: null,
+      user: null,
+      setToken: (token, user) => set({ token, user }),
+      logout: () => set({ token: null, user: null }),
+    }),
+    {
+      name: 'forge-auth',
+      partialize: (s) => ({ token: s.token, user: s.user }),
+    },
+  ),
+)
 
 // Stable selector helpers — use these to avoid re-render issues
 export const selectToken = (s: AuthState) => s.token
