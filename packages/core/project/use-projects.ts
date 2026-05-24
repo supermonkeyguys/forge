@@ -73,3 +73,17 @@ export function useCreateProject() {
     },
   })
 }
+
+export function useDeleteProject() {
+  const token = useAuthStore(selectToken)
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      await api.delete(`/api/v1/projects/${projectId}`, token ?? undefined)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
+}
