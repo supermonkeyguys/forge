@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjects, useDeleteProject } from '@forge/core'
 import { ProjectCard } from '../components/project-card/project-card.js'
@@ -8,10 +9,13 @@ export function ProjectsPage() {
   const { data, isLoading, isError } = useProjects()
   const { mutate: deleteProject } = useDeleteProject()
   const projects = data?.data ?? []
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleDelete = (id: string) => {
     if (!window.confirm('确定删除这个项目？此操作不可撤销。')) return
-    deleteProject(id)
+    deleteProject(id, {
+      onError: () => setDeleteError('删除失败，请稍后重试'),
+    })
   }
 
   if (isLoading) {
@@ -50,6 +54,10 @@ export function ProjectsPage() {
             + 新建项目
           </button>
         </div>
+
+        {deleteError && (
+          <p style={{ fontSize: 13, color: 'var(--red, #ef4444)', marginBottom: 12 }}>{deleteError}</p>
+        )}
 
         {projects.length === 0 ? (
           <EmptyState onNew={() => navigate('/projects/new')} />
