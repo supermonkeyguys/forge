@@ -58,8 +58,17 @@ func (h *TaskHandler) ProjectStream(w http.ResponseWriter, r *http.Request) {
 	task := tasks[0]
 
 	if !canFlush {
-		data, _ := json.Marshal(map[string]string{"type": "task_state", "status": string(task.Status)})
+		data, _ := json.Marshal(map[string]string{
+			"type":       "task_state",
+			"status":     string(task.Status),
+			"previewUrl": task.PreviewURL,
+			"errorMsg":   task.ErrorMsg,
+		})
 		fmt.Fprintf(w, "event: agent_event\ndata: %s\n\n", data)
+		if task.IsTerminal() {
+			doneData, _ := json.Marshal(map[string]string{"previewUrl": task.PreviewURL})
+			fmt.Fprintf(w, "event: done\ndata: %s\n\n", doneData)
+		}
 		return
 	}
 
@@ -88,7 +97,8 @@ func (h *TaskHandler) ProjectStream(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 
 			if t.IsTerminal() {
-				fmt.Fprintf(w, "event: done\ndata: {\"previewUrl\":\"%s\"}\n\n", t.PreviewURL)
+				doneData, _ := json.Marshal(map[string]string{"previewUrl": t.PreviewURL})
+				fmt.Fprintf(w, "event: done\ndata: %s\n\n", doneData)
 				flusher.Flush()
 				return
 			}
