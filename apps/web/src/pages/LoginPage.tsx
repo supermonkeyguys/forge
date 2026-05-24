@@ -34,7 +34,10 @@ export function LoginPage() {
 
   const handleDevLogin = () => {
     setError('')
-    devLogin(undefined, { onSuccess: () => navigate('/projects') })
+    devLogin(undefined, {
+      onSuccess: () => navigate('/projects'),
+      onError: () => setError('快速登录失败，请检查后端服务是否启动'),
+    })
   }
 
   const isPending = loginPending || devPending

@@ -22,11 +22,14 @@ export function useMe() {
   const token = useAuthStore(selectToken)
 
   return useQuery({
-    queryKey: ['me'],
+    queryKey: ['me', token],
     queryFn: async () => {
       const raw = await api.get<User>('/api/v1/auth/me', token ?? undefined)
-      const parsed = parseWithFallback(UserSchema, raw, null)
-      return parsed?.data ?? null
+      const parsed = parseWithFallback(UserSchema, raw, {
+        data: { id: '', email: '', name: '', createdAt: '' },
+      })
+      if (!parsed.data.id) return null
+      return parsed.data
     },
     enabled: token !== null,
     staleTime: 5 * 60 * 1000,

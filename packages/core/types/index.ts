@@ -121,8 +121,8 @@ export interface Task {
   userId: string
   prompt: string
   status: TaskStatus
-  previewUrl: string
-  errorMsg: string
+  previewUrl: string | null
+  errorMsg: string | null
   createdAt: string
   updatedAt: string
 }
