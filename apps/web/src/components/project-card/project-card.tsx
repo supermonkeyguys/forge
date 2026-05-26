@@ -1,5 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import type { Project, ProjectStatus } from '@forge/core'
+import { Card, CardContent } from '../ui/card'
+import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
+import { cn } from '../../lib/utils'
 
 const STATUS_LABEL: Record<ProjectStatus, string> = {
   done:       '完成',
@@ -13,18 +17,6 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
   idle:       '待机',
 }
 
-const STATUS_COLOR: Record<ProjectStatus, string> = {
-  done:      'var(--green)',
-  failed:    'var(--red)',
-  waiting:   'var(--yellow)',
-  building:  'var(--accent)',
-  analyzing: 'var(--accent)',
-  planning:  'var(--accent)',
-  validating:'var(--accent)',
-  fixing:    'var(--accent)',
-  idle:      'var(--text-dim)',
-}
-
 const IN_PROGRESS = new Set(['building', 'analyzing', 'planning', 'validating', 'fixing'])
 
 interface ProjectCardProps {
@@ -32,81 +24,69 @@ interface ProjectCardProps {
   onDelete: (id: string) => void
 }
 
-export function ProjectCard({ project, onDelete }: ProjectCardProps) {
-  const navigate = useNavigate()
-  const color = STATUS_COLOR[project.status]
-  const label = STATUS_LABEL[project.status]
-
-  return (
-    <div style={{
-      background: 'var(--bg-card)',
-      border: `1px solid ${IN_PROGRESS.has(project.status) ? 'rgba(91,110,245,0.3)' : 'var(--border)'}`,
-      borderRadius: 'var(--radius)',
-      padding: 16,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, flex: 1, marginRight: 8 }}>
-          {project.name}
-        </div>
-        <span style={{
-          background: color + '20',
-          color,
-          border: `1px solid ${color}40`,
-          borderRadius: 4,
-          fontSize: 11,
-          padding: '2px 7px',
-          whiteSpace: 'nowrap',
-        }}>
-          {label}
-        </span>
-      </div>
-
-      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 12 }}>
-        {new Date(project.createdAt).toLocaleDateString('zh-CN')}
-      </div>
-
-      <div style={{ display: 'flex', gap: 6 }}>
-        {project.status === 'done' && (
-          <>
-            {project.previewUrl && (
-              <ActionButton onClick={() => window.open(project.previewUrl!, '_blank')} label="预览" />
-            )}
-            <ActionButton onClick={() => navigate(`/projects/${project.id}`)} label="打开" />
-          </>
-        )}
-        {IN_PROGRESS.has(project.status) && (
-          <ActionButton onClick={() => navigate(`/projects/${project.id}`)} label="查看进度" primary />
-        )}
-        {(project.status === 'idle' || project.status === 'waiting') && (
-          <ActionButton onClick={() => navigate(`/projects/${project.id}`)} label="打开" />
-        )}
-        {project.status === 'failed' && (
-          <>
-            <ActionButton onClick={() => navigate(`/projects/${project.id}`)} label="重试" />
-            <ActionButton onClick={() => onDelete(project.id)} label="删除" />
-          </>
-        )}
-      </div>
-    </div>
-  )
+function statusVariant(status: ProjectStatus): { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string } {
+  if (status === 'done') return { variant: 'outline', className: 'border-green-500 text-green-400' }
+  if (status === 'failed') return { variant: 'destructive' }
+  if (status === 'waiting') return { variant: 'outline', className: 'border-yellow-500 text-yellow-400' }
+  if (IN_PROGRESS.has(status)) return { variant: 'secondary' }
+  return { variant: 'outline' }
 }
 
-function ActionButton({ onClick, label, primary }: { onClick: () => void; label: string; primary?: boolean }) {
+export function ProjectCard({ project, onDelete }: ProjectCardProps) {
+  const navigate = useNavigate()
+  const { variant, className } = statusVariant(project.status)
+
   return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: 1,
-        background: 'var(--bg-hover)',
-        border: 'none',
-        borderRadius: 'var(--radius-sm)',
-        color: primary ? 'var(--accent)' : 'var(--text-muted)',
-        fontSize: 11,
-        padding: '6px 0',
-        cursor: 'pointer',
-      }}
-    >
-      {label}
-    </button>
+    <Card className={cn(
+      IN_PROGRESS.has(project.status) && 'border-primary/30'
+    )}>
+      <CardContent className="p-4">
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="flex-1 text-sm font-semibold">{project.name}</div>
+          <Badge variant={variant} className={cn('shrink-0 text-[11px]', className)}>
+            {STATUS_LABEL[project.status]}
+          </Badge>
+        </div>
+
+        <div className="mb-3 text-[11px] text-muted-foreground">
+          {new Date(project.createdAt).toLocaleDateString('zh-CN')}
+        </div>
+
+        <div className="flex gap-1.5">
+          {project.status === 'done' && (
+            <>
+              {project.previewUrl && (
+                <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => window.open(project.previewUrl!, '_blank')}>
+                  预览
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => navigate(`/projects/${project.id}`)}>
+                打开
+              </Button>
+            </>
+          )}
+          {IN_PROGRESS.has(project.status) && (
+            <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs text-primary" onClick={() => navigate(`/projects/${project.id}`)}>
+              查看进度
+            </Button>
+          )}
+          {(project.status === 'idle' || project.status === 'waiting') && (
+            <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => navigate(`/projects/${project.id}`)}>
+              打开
+            </Button>
+          )}
+          {project.status === 'failed' && (
+            <>
+              <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => navigate(`/projects/${project.id}`)}>
+                重试
+              </Button>
+              <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs text-destructive" onClick={() => onDelete(project.id)}>
+                删除
+              </Button>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
