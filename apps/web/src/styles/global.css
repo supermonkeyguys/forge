@@ -1,39 +1,68 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@import "tailwindcss";
 
-:root {
-  --bg:          #0f0f0f;
-  --bg-panel:    #161616;
-  --bg-card:     #1e1e1e;
-  --bg-hover:    #252525;
-  --border:      #2a2a2a;
-  --border-soft: #222222;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.6%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.6%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.6%;
+    --radius: 0.5rem;
+  }
 
-  --text:        #e8e8e8;
-  --text-muted:  #888;
-  --text-dim:    #555;
+  .dark {
+    --background: 0 0% 3.6%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 98%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+  }
+}
 
-  --accent:      #5b6ef5;
-  --accent-soft: rgba(91,110,245,0.12);
-  --green:       #4ade80;
-  --green-soft:  rgba(74,222,128,0.12);
-  --red:         #f87171;
-  --red-soft:    rgba(248,113,113,0.12);
-  --yellow:      #fbbf24;
-  --yellow-soft: rgba(251,191,36,0.12);
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-  --radius:      8px;
-  --radius-sm:   4px;
-  --font:        -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono:   'SF Mono', 'Fira Code', monospace;
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 html, body, #root {
   height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 14px;
-  line-height: 1.5;
 }
 
 button {
@@ -45,6 +74,15 @@ input, textarea {
   font-family: inherit;
 }
 
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}

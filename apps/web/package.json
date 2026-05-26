@@ -13,9 +13,11 @@
     "@forge/core": "workspace:*",
     "@forge/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
+    "clsx": "^2.1.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-router-dom": "^6.0.0",
+    "tailwind-merge": "^3.6.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

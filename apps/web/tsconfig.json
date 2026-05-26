@@ -10,6 +10,9 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "paths": {
+      "@/components": ["./src/components"],
+      "@/lib": ["./src/lib"],
+      "@/hooks": ["./src/hooks"],
       "@forge/core": ["../../packages/core"],
       "@forge/core/*": ["../../packages/core/*"],
       "@forge/ui": ["../../packages/ui"],
