@@ -1,27 +1,10 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-/**
- * Left panel — three phases:
- *   input     → RequirementInput (user types what they want)
- *   pm-review → PMReview (user reviews AI-amplified features)
- *   running / done / waiting → ConversationHistory (shows progress + allows iteration)
- */
-import { useWorkspaceStore, selectPhase } from '../../store/workspace-store.js';
-import { RequirementInput } from './RequirementInput.js';
-import { PMReview } from './PMReview.js';
-import { ConversationHistory } from './ConversationHistory.js';
+import { useWorkspaceStore, selectPhase } from '../../store/workspace-store';
+import { RequirementInput } from './RequirementInput';
+import { PMReview } from './PMReview';
+import { ConversationHistory } from './ConversationHistory';
+import { Separator } from '../ui/separator';
 export function ConversationPanel() {
     const phase = useWorkspaceStore(selectPhase);
-    return (_jsxs("div", { style: {
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            borderRight: '1px solid var(--border)',
-            background: 'var(--bg-panel)',
-        }, children: [_jsx("div", { style: {
-                    padding: '16px 20px',
-                    borderBottom: '1px solid var(--border-soft)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                }, children: _jsx("span", { style: { fontSize: 18, fontWeight: 700, letterSpacing: '-0.5px' }, children: "\uD83D\uDD28 Forge" }) }), _jsxs("div", { style: { flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }, children: [phase === 'input' && _jsx(RequirementInput, {}), phase === 'pm-review' && _jsx(PMReview, {}), (phase === 'running' || phase === 'done' || phase === 'waiting' || phase === 'error') && (_jsx(ConversationHistory, {}))] })] }));
+    return (_jsxs("div", { className: "flex h-full flex-col border-r border-border bg-card", children: [_jsx("div", { className: "flex items-center gap-2 px-5 py-4", children: _jsx("span", { className: "text-lg font-bold tracking-tight", children: "\uD83D\uDD28 Forge" }) }), _jsx(Separator, {}), _jsxs("div", { className: "flex flex-1 flex-col overflow-hidden", children: [phase === 'input' && _jsx(RequirementInput, {}), phase === 'pm-review' && _jsx(PMReview, {}), (phase === 'running' || phase === 'done' || phase === 'waiting' || phase === 'error') && (_jsx(ConversationHistory, {}))] })] }));
 }
