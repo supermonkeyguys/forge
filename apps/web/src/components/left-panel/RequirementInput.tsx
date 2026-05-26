@@ -1,12 +1,7 @@
-/**
- * RequirementInput — the first thing the user sees.
- * A textarea + send button. On submit, calls the API to create a project
- * and transitions to pm-review phase.
- */
-
 import { useState, useRef, useEffect } from 'react'
-import { useWorkspaceStore, selectUserInput } from '../../store/workspace-store.js'
-import { useCreateProject } from '@forge/core'
+import { useWorkspaceStore, selectUserInput } from '../../store/workspace-store'
+import { Button } from '../ui/button'
+import { Textarea } from '../ui/textarea'
 
 const PLACEHOLDER_EXAMPLES = [
   '我需要一个报销申请系统',
@@ -25,7 +20,6 @@ export function RequirementInput() {
   const [isLoading, setIsLoading] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Cycle placeholder examples
   useEffect(() => {
     let i = 0
     const id = setInterval(() => {
@@ -35,7 +29,6 @@ export function RequirementInput() {
     return () => clearInterval(id)
   }, [])
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
@@ -48,9 +41,7 @@ export function RequirementInput() {
     setIsLoading(true)
 
     try {
-      // In Phase 1 (no Go API yet): mock the PM draft response
-      // This will be replaced with a real API call once Go API is ready
-      await new Promise((r) => setTimeout(r, 800)) // simulate network
+      await new Promise((r) => setTimeout(r, 800))
 
       const mockDraft = {
         title: userInput.length > 20 ? userInput.slice(0, 20) + '...' : userInput,
@@ -111,93 +102,45 @@ export function RequirementInput() {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 20px', gap: 24 }}>
-      {/* Hero text */}
+    <div className="flex flex-1 flex-col gap-6 px-5 py-6">
       <div>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
-          描述你想做的 App
-        </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          AI 会帮你补全细节，再由 Agent 团队协作生成
-        </p>
+        <h2 className="mb-2 text-xl font-semibold">描述你想做的 App</h2>
+        <p className="text-sm text-muted-foreground">AI 会帮你补全细节，再由 Agent 团队协作生成</p>
       </div>
 
-      {/* Textarea */}
-      <div style={{ position: 'relative' }}>
-        <textarea
-          ref={textareaRef}
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          rows={4}
-          style={{
-            width: '100%',
-            minHeight: 120,
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            color: 'var(--text)',
-            fontSize: 14,
-            lineHeight: 1.6,
-            padding: '12px 14px',
-            resize: 'none',
-            outline: 'none',
-            transition: 'border-color 0.15s',
-          }}
-          onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
-          onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
-        />
-      </div>
+      <Textarea
+        ref={textareaRef}
+        value={userInput}
+        onChange={(e) => setUserInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        rows={4}
+        className="min-h-[120px] resize-none text-sm leading-relaxed"
+      />
 
-      {/* Submit */}
-      <button
+      <Button
         onClick={handleSubmit}
         disabled={!userInput.trim() || isLoading}
-        style={{
-          background: userInput.trim() && !isLoading ? 'var(--accent)' : 'var(--bg-card)',
-          color: userInput.trim() && !isLoading ? '#fff' : 'var(--text-muted)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '10px 16px',
-          fontSize: 14,
-          fontWeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          transition: 'all 0.15s',
-          cursor: userInput.trim() && !isLoading ? 'pointer' : 'not-allowed',
-        }}
+        className="w-full"
       >
         {isLoading ? (
-          <>
-            <Spinner /> 分析需求中...
-          </>
+          <span className="flex items-center gap-2">
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+            分析需求中...
+          </span>
         ) : (
-          <>生成应用 <kbd style={{ fontSize: 11, opacity: 0.6 }}>⌘↵</kbd></>
+          <span>生成应用 <kbd className="ml-1 text-xs opacity-60">⌘↵</kbd></span>
         )}
-      </button>
+      </Button>
 
-      {/* Examples */}
       <div>
-        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>试试这些：</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <p className="mb-2 text-xs text-muted-foreground/60">试试这些：</p>
+        <div className="flex flex-col gap-1">
           {PLACEHOLDER_EXAMPLES.map((ex) => (
             <button
               key={ex}
               onClick={() => setUserInput(ex)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-muted)',
-                fontSize: 12,
-                textAlign: 'left',
-                padding: '4px 0',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+              className="py-1 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               → {ex}
             </button>
@@ -205,19 +148,5 @@ export function RequirementInput() {
         </div>
       </div>
     </div>
-  )
-}
-
-function Spinner() {
-  return (
-    <span style={{
-      width: 14,
-      height: 14,
-      border: '2px solid rgba(255,255,255,0.3)',
-      borderTopColor: '#fff',
-      borderRadius: '50%',
-      display: 'inline-block',
-      animation: 'spin 0.7s linear infinite',
-    }} />
   )
 }
