@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjects, useDeleteProject } from '@forge/core'
-import { ProjectCard } from '../components/project-card/project-card.js'
-import { PageShell, EmptyState, LoadingState, ErrorState } from '../components/project-card/project-page-states.js'
+import { ProjectCard } from '../components/project-card/project-card'
+import { PageShell, EmptyState, LoadingState, ErrorState } from '../components/project-card/project-page-states'
+import { Button } from '../components/ui/button'
 
 export function ProjectsPage() {
   const navigate = useNavigate()
@@ -28,45 +29,29 @@ export function ProjectsPage() {
 
   return (
     <PageShell>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="mx-auto max-w-[900px] px-6 py-8">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700 }}>我的项目</h1>
+            <h1 className="text-xl font-bold">我的项目</h1>
             {projects.length > 0 && (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {projects.length} 个项目
               </p>
             )}
           </div>
-          <button
-            onClick={() => navigate('/projects/new')}
-            style={{
-              background: 'var(--accent)',
-              border: 'none',
-              borderRadius: 'var(--radius)',
-              color: '#fff',
-              fontSize: 13,
-              fontWeight: 500,
-              padding: '8px 16px',
-              cursor: 'pointer',
-            }}
-          >
+          <Button onClick={() => navigate('/projects/new')} size="sm">
             + 新建项目
-          </button>
+          </Button>
         </div>
 
         {deleteError && (
-          <p style={{ fontSize: 13, color: 'var(--red, #ef4444)', marginBottom: 12 }}>{deleteError}</p>
+          <p className="mb-3 text-sm text-destructive">{deleteError}</p>
         )}
 
         {projects.length === 0 ? (
           <EmptyState onNew={() => navigate('/projects/new')} />
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: 12,
-          }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
             {projects.map((p) => (
               <ProjectCard key={p.id} project={p} onDelete={handleDelete} />
             ))}
