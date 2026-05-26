@@ -1,9 +1,3 @@
-/**
- * ConversationHistory — shown during running / done / waiting phases.
- * Displays a timeline of state changes and allows the user to send
- * follow-up messages (iteration).
- */
-
 import { useState, useEffect, useRef } from 'react'
 import {
   useWorkspaceStore,
@@ -11,7 +5,11 @@ import {
   selectOrchestratorState,
   selectWaitingReason,
   selectEvents,
-} from '../../store/workspace-store.js'
+} from '../../store/workspace-store'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { ScrollArea } from '../ui/scroll-area'
+import { cn } from '../../lib/utils'
 
 export function ConversationHistory() {
   const phase = useWorkspaceStore(selectPhase)
@@ -21,7 +19,6 @@ export function ConversationHistory() {
   const [iterationInput, setIterationInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom when new events arrive
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [events.length])
@@ -43,95 +40,58 @@ export function ConversationHistory() {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* State indicator */}
-      <div style={{
-        padding: '12px 20px',
-        borderBottom: '1px solid var(--border-soft)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-      }}>
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-border/50 px-5 py-3">
         {phase === 'running' && (
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', animation: 'pulse 1.5s ease infinite', flexShrink: 0 }} />
+          <span className="h-2 w-2 shrink-0 rounded-full bg-primary animate-pulse" />
         )}
         {phase === 'done' && (
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }} />
+          <span className="h-2 w-2 shrink-0 rounded-full bg-green-500" />
         )}
         {phase === 'waiting' && (
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--yellow)', flexShrink: 0 }} />
+          <span className="h-2 w-2 shrink-0 rounded-full bg-yellow-500" />
         )}
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+        <span className="text-sm text-muted-foreground">
           {orchState ? stateLabel[orchState] ?? orchState : '启动中...'}
         </span>
       </div>
 
-      {/* Event log */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {events
-          .filter((e) => ['state_change', 'agent_done', 'agent_error', 'waiting'].includes(e.type))
-          .map((event, i) => (
-            <EventLine key={i} event={event} />
-          ))}
+      <ScrollArea className="flex-1 px-5 py-3">
+        <div className="flex flex-col gap-1.5">
+          {events
+            .filter((e) => ['state_change', 'agent_done', 'agent_error', 'waiting'].includes(e.type))
+            .map((event, i) => (
+              <EventLine key={i} event={event} />
+            ))}
 
-        {/* Waiting prompt */}
-        {phase === 'waiting' && waitingReason && (
-          <div style={{
-            background: 'var(--yellow-soft)',
-            border: '1px solid rgba(251,191,36,0.2)',
-            borderRadius: 'var(--radius)',
-            padding: '10px 12px',
-            marginTop: 8,
-          }}>
-            <p style={{ fontSize: 12, color: 'var(--yellow)', fontWeight: 500, marginBottom: 4 }}>
-              AI 卡住了，需要你的帮助
-            </p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{waitingReason}</p>
-          </div>
-        )}
+          {phase === 'waiting' && waitingReason && (
+            <div className="mt-2 rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-3 py-2.5">
+              <p className="mb-1 text-xs font-medium text-yellow-500">AI 卡住了，需要你的帮助</p>
+              <p className="text-xs text-muted-foreground">{waitingReason}</p>
+            </div>
+          )}
 
-        <div ref={bottomRef} />
-      </div>
+          <div ref={bottomRef} />
+        </div>
+      </ScrollArea>
 
-      {/* Iteration input */}
       {(phase === 'done' || phase === 'waiting') && (
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-soft)' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
+        <div className="border-t border-border/50 px-5 py-3">
+          <div className="flex gap-2">
+            <Input
               value={iterationInput}
               onChange={(e) => setIterationInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleIteration()}
               placeholder={phase === 'waiting' ? '告诉 AI 怎么解决...' : '继续迭代，例如：把按钮改成蓝色'}
-              style={{
-                flex: 1,
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text)',
-                fontSize: 13,
-                padding: '8px 10px',
-                outline: 'none',
-              }}
-              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
-              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+              className="flex-1 text-sm"
             />
-            <button
+            <Button
               onClick={handleIteration}
               disabled={!iterationInput.trim()}
-              style={{
-                background: 'var(--accent)',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                color: '#fff',
-                padding: '0 14px',
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: iterationInput.trim() ? 'pointer' : 'not-allowed',
-                opacity: iterationInput.trim() ? 1 : 0.5,
-              }}
+              size="sm"
             >
               发送
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -140,27 +100,28 @@ export function ConversationHistory() {
 }
 
 function EventLine({ event }: { event: ReturnType<typeof selectEvents>[number] }) {
-  const stateColors: Record<string, string> = {
-    done: 'var(--green)',
-    waiting: 'var(--yellow)',
-    failed: 'var(--red)',
-  }
-
   if (event.type === 'state_change') {
+    const dotClass = cn(
+      'h-1.5 w-1.5 shrink-0 rounded-full',
+      event.state === 'done' ? 'bg-green-500' :
+      event.state === 'waiting' ? 'bg-yellow-500' :
+      event.state === 'failed' ? 'bg-destructive' :
+      'bg-primary'
+    )
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: stateColors[event.state ?? ''] ?? 'var(--accent)', flexShrink: 0 }} />
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{event.state}</span>
+      <div className="flex items-center gap-2">
+        <span className={dotClass} />
+        <span className="text-xs text-muted-foreground">{event.state}</span>
       </div>
     )
   }
 
   if (event.type === 'agent_done') {
     return (
-      <div style={{ display: 'flex', gap: 8 }}>
-        <span style={{ fontSize: 12, color: 'var(--green)', flexShrink: 0 }}>✓</span>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          <strong style={{ color: 'var(--text)' }}>{event.agent}</strong>: {event.summary}
+      <div className="flex gap-2">
+        <span className="shrink-0 text-xs text-green-500">✓</span>
+        <span className="text-xs text-muted-foreground">
+          <strong className="text-foreground">{event.agent}</strong>: {event.summary}
         </span>
       </div>
     )
@@ -168,10 +129,10 @@ function EventLine({ event }: { event: ReturnType<typeof selectEvents>[number] }
 
   if (event.type === 'agent_error') {
     return (
-      <div style={{ display: 'flex', gap: 8 }}>
-        <span style={{ fontSize: 12, color: 'var(--red)', flexShrink: 0 }}>✗</span>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          <strong style={{ color: 'var(--red)' }}>{event.agent}</strong>: {event.error}
+      <div className="flex gap-2">
+        <span className="shrink-0 text-xs text-destructive">✗</span>
+        <span className="text-xs text-muted-foreground">
+          <strong className="text-destructive">{event.agent}</strong>: {event.error}
         </span>
       </div>
     )
