@@ -9,6 +9,7 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "baseUrl": ".",
     "paths": {
       "@/components": ["./src/components"],
       "@/lib": ["./src/lib"],

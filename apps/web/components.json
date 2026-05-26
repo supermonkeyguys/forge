@@ -4,7 +4,7 @@
   "rsc": false,
   "tsx": true,
   "alias": {
-    "@/components": "./src/components/ui",
+    "@/components": "./src/components",
     "@/lib": "./src/lib",
     "@/hooks": "./src/hooks"
   },
