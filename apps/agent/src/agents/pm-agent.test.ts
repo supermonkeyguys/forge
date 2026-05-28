@@ -218,3 +218,55 @@ describe('ClarifyingQuestion type', () => {
     expect(q.options).toBeUndefined()
   })
 })
+
+describe('PMAgent.renderReviewHTML', () => {
+  const agent = new PMAgent()
+
+  const mockDraft: DraftSpec = {
+    title: 'Task Manager',
+    description: 'A simple task management app',
+    business_domain: 'project-management',
+    features: [
+      {
+        id: 'F001',
+        name: 'Create Task',
+        confidence: 'high',
+        acceptance_criteria: ['User can create a task with title'],
+        out_of_scope: [],
+        selected: true,
+      },
+    ],
+    constraints: {
+      auth: true, database: true, file_upload: false, email: false, payments: false,
+    },
+    clarifying_questions: [
+      {
+        id: 'Q001',
+        question: 'Do users need team collaboration?',
+        type: 'single',
+        options: ['Yes', 'No'],
+        required: true,
+      },
+    ],
+  }
+
+  it('replaces all three placeholders', () => {
+    const html = agent.renderReviewHTML(mockDraft, 'job-123', 'http://localhost:3001/confirm-draft/job-123')
+    expect(html).not.toContain('__DRAFT_JSON__')
+    expect(html).not.toContain('__JOB_ID__')
+    expect(html).not.toContain('__CONFIRM_URL__')
+  })
+
+  it('injects draft data into HTML', () => {
+    const html = agent.renderReviewHTML(mockDraft, 'job-123', 'http://localhost:3001/confirm-draft/job-123')
+    expect(html).toContain('"title":"Task Manager"')
+    expect(html).toContain('job-123')
+    expect(html).toContain('http://localhost:3001/confirm-draft/job-123')
+  })
+
+  it('returns valid HTML document', () => {
+    const html = agent.renderReviewHTML(mockDraft, 'job-abc', 'http://x/confirm')
+    expect(html).toContain('<!DOCTYPE html>')
+    expect(html).toContain('</html>')
+  })
+})

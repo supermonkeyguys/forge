@@ -16,6 +16,9 @@ import { generateObject } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { join, dirname } from 'node:path'
 import { SpecSchema, type Spec, type Feature } from '../contracts/spec.js'
 import type { Agent, AgentRunContext, AgentResult } from './types.js'
 
@@ -174,6 +177,22 @@ export class PMAgent implements Agent {
 
     // Validate the final spec against the schema before returning
     return SpecSchema.parse(spec)
+  }
+
+  /**
+   * Render the A2UI review HTML by injecting DraftSpec into the template.
+   * Returns the complete HTML string — caller writes it to sandbox or disk.
+   */
+  renderReviewHTML(draft: DraftSpec, jobId: string, confirmUrl: string): string {
+    const __dirname = dirname(fileURLToPath(import.meta.url))
+    const templatePath = join(__dirname, '../templates/pm-review.html')
+    let html = readFileSync(templatePath, 'utf-8')
+
+    html = html.replace('__DRAFT_JSON__', JSON.stringify(draft))
+    html = html.replace('__JOB_ID__', jobId)
+    html = html.replace('__CONFIRM_URL__', confirmUrl)
+
+    return html
   }
 
   /** Full run: used by orchestrator when resuming a WAITING task with user input */
