@@ -110,3 +110,40 @@ func TestInternalHandler_UpdateTaskStatus_WithPreviewURL(t *testing.T) {
 		t.Fatalf("expected previewUrl passed through, got %q", capturedPreviewURL)
 	}
 }
+
+func TestInternalHandler_UpdateTaskStatus_MalformedJSON(t *testing.T) {
+	h := handler.NewInternalHandler(&mock.TaskRepo{})
+	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status",
+		bytes.NewReader([]byte(`{invalid json}`)))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	internalRouter(h).ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestInternalHandler_UpdateTaskStatus_ErrorMsgPassthrough(t *testing.T) {
+	var capturedErrorMsg string
+	taskRepo := &mock.TaskRepo{
+		UpdateStatusFn: func(_ context.Context, id string, status domain.TaskStatus, previewURL, errorMsg string) (domain.Task, error) {
+			capturedErrorMsg = errorMsg
+			return domain.Task{ID: id, Status: status, ErrorMsg: errorMsg}, nil
+		},
+	}
+	h := handler.NewInternalHandler(taskRepo)
+	body, _ := json.Marshal(map[string]string{
+		"status":   "failed",
+		"errorMsg": "sandbox timed out",
+	})
+	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	internalRouter(h).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if capturedErrorMsg != "sandbox timed out" {
+		t.Fatalf("expected errorMsg passed through, got %q", capturedErrorMsg)
+	}
+}

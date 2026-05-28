@@ -22,6 +22,10 @@ func NewInternalHandler(taskRepo domain.TaskRepository) *InternalHandler {
 // PATCH /internal/tasks/{taskID}/status
 func (h *InternalHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
 	taskID := chi.URLParam(r, "taskID")
+	if taskID == "" {
+		middleware.WriteFieldError(w, "taskID", "taskID is required")
+		return
+	}
 
 	var body struct {
 		Status     string `json:"status"`
