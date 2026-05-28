@@ -22,6 +22,11 @@ import { join, dirname } from 'node:path'
 import { SpecSchema, type Spec, type Feature } from '../contracts/spec.js'
 import type { Agent, AgentRunContext, AgentResult } from './types.js'
 
+const _reviewTemplate = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '../templates/pm-review.html'),
+  'utf-8',
+)
+
 // ── Draft Spec (before user review) ─────────────────────────────
 
 export interface DraftSpec {
@@ -184,11 +189,8 @@ export class PMAgent implements Agent {
    * Returns the complete HTML string — caller writes it to sandbox or disk.
    */
   renderReviewHTML(draft: DraftSpec, jobId: string, confirmUrl: string): string {
-    const __dirname = dirname(fileURLToPath(import.meta.url))
-    const templatePath = join(__dirname, '../templates/pm-review.html')
-    let html = readFileSync(templatePath, 'utf-8')
-
-    html = html.replace('__DRAFT_JSON__', JSON.stringify(draft))
+    let html = _reviewTemplate
+    html = html.replace('__DRAFT_JSON__', JSON.stringify(draft).replace(/\//g, '\\/'))
     html = html.replace('__JOB_ID__', jobId)
     html = html.replace('__CONFIRM_URL__', confirmUrl)
 
