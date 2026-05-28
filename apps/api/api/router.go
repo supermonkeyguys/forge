@@ -14,12 +14,14 @@ import (
 
 // RouterDeps holds all handler dependencies for route assembly.
 type RouterDeps struct {
-	Auth      *handler.AuthHandler
-	Project   *handler.ProjectHandler
-	Task      *handler.TaskHandler
-	Health    *handler.HealthHandler
-	JWTSecret string
-	Logger    *slog.Logger
+	Auth          *handler.AuthHandler
+	Project       *handler.ProjectHandler
+	Task          *handler.TaskHandler
+	Health        *handler.HealthHandler
+	Internal      *handler.InternalHandler
+	InternalToken string
+	JWTSecret     string
+	Logger        *slog.Logger
 }
 
 // NewRouter assembles all routes and returns the root http.Handler.
@@ -82,6 +84,14 @@ func NewRouter(deps RouterDeps) http.Handler {
 		// SSE stream (task-level, not nested under project for simplicity)
 		r.Get("/tasks/{taskID}/stream", deps.Task.Stream)
 	})
+
+	// Internal routes — service-to-service only, no JWT
+	if deps.Internal != nil {
+		r.Route("/internal", func(r chi.Router) {
+			r.Use(middleware.RequireInternalToken(deps.InternalToken))
+			r.Patch("/tasks/{taskID}/status", deps.Internal.UpdateTaskStatus)
+		})
+	}
 
 	return r
 }
