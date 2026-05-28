@@ -27,6 +27,7 @@ type JobStatus = 'queued' | 'running' | OrchestratorState
 
 interface Job {
   id: string
+  taskId: string | null   // Go API task ID — used for status callbacks
   projectId: string
   status: JobStatus
   events: ProgressEvent[]
@@ -83,7 +84,7 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
     return sendError(res, 400, 'invalid JSON body')
   }
 
-  const { projectId, userInput } = body as Record<string, unknown>
+  const { taskId, projectId, userInput } = body as Record<string, unknown>
   if (typeof projectId !== 'string' || !projectId.trim()) {
     return sendError(res, 400, 'projectId is required')
   }
@@ -96,6 +97,7 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
 
   const job: Job = {
     id: jobId,
+    taskId: typeof taskId === 'string' ? taskId : null,
     projectId,
     status: 'queued',
     events: [],
@@ -209,6 +211,37 @@ async function handleConfirmDraft(
   send(res, 200, { data: { jobId, status: 'confirmed' } })
 }
 
+// ── Go API callback ─────────────────────────────────────────────────
+
+async function notifyGoAPI(
+  taskId: string,
+  status: string,
+  extras?: { previewUrl?: string; errorMsg?: string },
+): Promise<void> {
+  const apiUrl = process.env['FORGE_API_URL'] ?? 'http://localhost:8080'
+  if (!apiUrl) return
+
+  const token = process.env['INTERNAL_TOKEN'] ?? ''
+  const body = JSON.stringify({
+    status,
+    previewUrl: extras?.previewUrl ?? '',
+    errorMsg: extras?.errorMsg ?? '',
+  })
+
+  try {
+    await fetch(`${apiUrl}/internal/tasks/${taskId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'X-Internal-Token': token } : {}),
+      },
+      body,
+    })
+  } catch (err) {
+    console.error(`[notifyGoAPI] failed to update task ${taskId} status to ${status}:`, err)
+  }
+}
+
 // ── Job runner ────────────────────────────────────────────────────
 
 async function runJob(job: Job, userInput: string): Promise<void> {
@@ -243,6 +276,15 @@ async function runJob(job: Job, userInput: string): Promise<void> {
       job.status = state
       if (ctx.reviewUrl) job.reviewUrl = ctx.reviewUrl    // sync reviewUrl from orchestrator context
       job.updatedAt = new Date().toISOString()
+      if (job.taskId) {
+        const extras =
+          state === 'done'
+            ? { previewUrl: job.previewUrl ?? undefined }
+            : state === 'aborted'
+              ? { errorMsg: job.error ?? undefined }
+              : undefined
+        await notifyGoAPI(job.taskId, state, extras)
+      }
     },
 
     onDraftReady: (draft: DraftSpec): Promise<DraftSpec> => {
