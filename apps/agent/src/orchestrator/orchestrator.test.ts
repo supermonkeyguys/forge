@@ -18,7 +18,10 @@ import type { DraftSpec } from '../agents/pm-agent.js'
 
 // ── Mock all agent LLM calls ──────────────────────────────────────
 
-vi.mock('ai', () => ({ generateObject: vi.fn(), generateText: vi.fn() }))
+vi.mock('ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('ai')>()
+  return { ...actual, generateObject: vi.fn(), generateText: vi.fn() }
+})
 vi.mock('@ai-sdk/anthropic', () => ({ anthropic: vi.fn(() => 'mock-model') }))
 
 // ── Fixtures ──────────────────────────────────────────────────────
@@ -35,6 +38,7 @@ function makeCtx(
     maxRetries,
     state,
     previewUrl: null,
+    reviewUrl: null,
     pendingUserInput: null,
   }
 }
@@ -241,7 +245,7 @@ describe('affectedAgentCount()', () => {
 
 // Shared mock LLM setup for Orchestrator integration tests
 async function setupHappyPathMocks() {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   // Mock global fetch so startAndWaitForServer doesn't actually poll the network
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '<html>ok</html>' }))
 
@@ -267,7 +271,7 @@ async function setupHappyPathMocks() {
       checks: [{ criterion: 'User can submit form', method: 'skip', skip_reason: 'mocked' }],
     }} as any)
 
-  vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'model User {}' } as any)
+  vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'model User {}', steps: [] } as any)
 }
 
 describe('Orchestrator — happy path', () => {
@@ -281,6 +285,12 @@ describe('Orchestrator — happy path', () => {
 
   beforeEach(async () => {
     await setupHappyPathMocks()
+    // Restore sandbox implementations after resetAllMocks() clears them
+    mockSandbox.writeFile.mockResolvedValue(undefined)
+    mockSandbox.readFile.mockResolvedValue('')
+    mockSandbox.run.mockResolvedValue({ stdout: '{"numPassedTests":5,"numFailedTests":0,"testResults":[]}', stderr: '', exitCode: 0 })
+    mockSandbox.startBackground.mockResolvedValue(undefined)
+    mockSandbox.getPreviewUrl.mockReturnValue('https://sandbox-123.e2b.app')
   })
 
   it('reaches done state on happy path', async () => {
@@ -351,7 +361,7 @@ describe('Orchestrator — retry + waiting', () => {
   }
 
   async function setupRetryMocks() {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => 'ok' }))
     const aiModule = await import('ai')
 
@@ -368,11 +378,17 @@ describe('Orchestrator — retry + waiting', () => {
       }} as any)
       .mockResolvedValue({ object: { checks: [] }} as any)
 
-    vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'code' } as any)
+    vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'code', steps: [] } as any)
   }
 
   beforeEach(async () => {
     await setupRetryMocks()
+    // Restore sandbox implementations after resetAllMocks() clears them
+    failSandbox.writeFile.mockResolvedValue(undefined)
+    failSandbox.readFile.mockResolvedValue('')
+    failSandbox.run.mockResolvedValue({ stdout: FAIL_VITEST_OUTPUT, stderr: '', exitCode: 1 })
+    failSandbox.startBackground.mockResolvedValue(undefined)
+    failSandbox.getPreviewUrl.mockReturnValue('https://x.e2b.app')
   })
 
   it('enters waiting state when retries exhausted (maxRetries=1)', async () => {
@@ -477,7 +493,7 @@ describe('A2UI integration — review HTML written to sandbox', () => {
         tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'schema.prisma', description: 'd', depends_on: [] }],
       }} as any)
 
-    vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'code' } as any)
+    vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'code', steps: [] } as any)
   })
 
   it('writes review.html to sandbox and sets reviewUrl in context', async () => {
@@ -508,6 +524,6 @@ describe('A2UI integration — review HTML written to sandbox', () => {
 
     // reviewUrl must be set to the sandbox preview URL + /review.html
     expect(capturedReviewUrl).not.toBeNull()
-    expect(capturedReviewUrl).toBe('https://mock-3000.e2b.dev/review.html')
+    expect(capturedReviewUrl).toBe('http://localhost:3001/review/proj-test')
   })
 })

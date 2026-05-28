@@ -190,7 +190,8 @@ export class Orchestrator {
     const confirmUrl = `${process.env.AGENT_BASE_URL ?? 'http://localhost:3001'}/confirm-draft/${this.ctx.projectId}`
     const reviewHtml = this.pm.renderReviewHTML(draft, this.ctx.projectId, confirmUrl)
     await this.writeSandboxFile('/home/user/review.html', reviewHtml)
-    this.ctx.reviewUrl = this.deps.sandbox.getPreviewUrl(3000) + '/review.html'
+    const agentBase = process.env.AGENT_BASE_URL ?? 'http://localhost:3001'
+    this.ctx.reviewUrl = `${agentBase}/review/${this.ctx.projectId}`
     await this.deps.onStateChange(this.ctx.state, this.ctx)
 
     // Pause here — let the user review and confirm the draft
