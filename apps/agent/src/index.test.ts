@@ -2,14 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { notifyGoAPI } from './index.js'
 
 describe('notifyGoAPI', () => {
-  const originalEnv = { ...process.env }
+  let originalEnv: NodeJS.ProcessEnv
 
   beforeEach(() => {
+    originalEnv = { ...process.env }
     vi.stubGlobal('fetch', vi.fn())
   })
 
   afterEach(() => {
-    process.env = { ...originalEnv }
+    process.env = originalEnv
     vi.unstubAllGlobals()
   })
 
@@ -71,6 +72,20 @@ describe('notifyGoAPI', () => {
       expect.any(String),
       expect.objectContaining({
         body: JSON.stringify({ status: 'done', previewUrl: 'https://preview.example.com', errorMsg: '' }),
+      }),
+    )
+  })
+
+  it('includes errorMsg in extras when error occurs', async () => {
+    process.env['FORGE_API_URL'] = 'http://go-api:8080'
+    vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 200 }))
+
+    await notifyGoAPI('task-abc', 'aborted', { errorMsg: 'sandbox timed out' })
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: JSON.stringify({ status: 'aborted', previewUrl: '', errorMsg: 'sandbox timed out' }),
       }),
     )
   })
