@@ -1,20 +1,17 @@
 import { useNavigate } from 'react-router-dom'
 import type { Project, ProjectStatus } from '@forge/core'
-import { Card, CardContent } from '../ui/card'
-import { Badge } from '../ui/badge'
-import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 
-const STATUS_LABEL: Record<ProjectStatus, string> = {
-  done:       '完成',
-  building:   '生成中',
-  analyzing:  '生成中',
-  planning:   '生成中',
-  validating: '生成中',
-  fixing:     '生成中',
-  failed:     '失败',
-  waiting:    '等待',
-  idle:       '待机',
+const STATUS_CONFIG: Record<ProjectStatus, { label: string; dot: string; ring: string }> = {
+  done:       { label: '完成', dot: 'bg-green-400', ring: 'ring-green-500/20' },
+  building:   { label: '生成中', dot: 'bg-primary animate-pulse', ring: 'ring-primary/20' },
+  analyzing:  { label: '分析中', dot: 'bg-primary animate-pulse', ring: 'ring-primary/20' },
+  planning:   { label: '规划中', dot: 'bg-primary animate-pulse', ring: 'ring-primary/20' },
+  validating: { label: '验证中', dot: 'bg-yellow-400 animate-pulse', ring: 'ring-yellow-500/20' },
+  fixing:     { label: '修复中', dot: 'bg-yellow-400 animate-pulse', ring: 'ring-yellow-500/20' },
+  failed:     { label: '失败', dot: 'bg-destructive', ring: 'ring-destructive/20' },
+  waiting:    { label: '等待', dot: 'bg-yellow-400', ring: 'ring-yellow-500/20' },
+  idle:       { label: '待机', dot: 'bg-muted-foreground/50', ring: 'ring-border' },
 }
 
 const IN_PROGRESS = new Set(['building', 'analyzing', 'planning', 'validating', 'fixing'])
@@ -24,69 +21,87 @@ interface ProjectCardProps {
   onDelete: (id: string) => void
 }
 
-function statusVariant(status: ProjectStatus): { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string } {
-  if (status === 'done') return { variant: 'outline', className: 'border-green-500 text-green-400' }
-  if (status === 'failed') return { variant: 'destructive' }
-  if (status === 'waiting') return { variant: 'outline', className: 'border-yellow-500 text-yellow-400' }
-  if (IN_PROGRESS.has(status)) return { variant: 'secondary' }
-  return { variant: 'outline' }
-}
-
 export function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const navigate = useNavigate()
-  const { variant, className } = statusVariant(project.status)
+  const config = STATUS_CONFIG[project.status]
+  const isActive = IN_PROGRESS.has(project.status)
 
   return (
-    <Card className={cn(
-      IN_PROGRESS.has(project.status) && 'border-primary/30'
-    )}>
-      <CardContent className="p-4">
-        <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="flex-1 text-sm font-semibold">{project.name}</div>
-          <Badge variant={variant} className={cn('shrink-0 text-[11px]', className)}>
-            {STATUS_LABEL[project.status]}
-          </Badge>
-        </div>
+    <div
+      className={cn(
+        'group relative overflow-hidden rounded-xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm transition-all duration-300',
+        'hover:border-border hover:bg-card hover:shadow-lg hover:shadow-black/10',
+        isActive && 'border-primary/30 animate-glow',
+      )}
+    >
+      {/* Subtle gradient top accent */}
+      {isActive && (
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+      )}
+      {project.status === 'done' && (
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-green-500/60 to-transparent" />
+      )}
 
-        <div className="mb-3 text-[11px] text-muted-foreground">
-          {new Date(project.createdAt).toLocaleDateString('zh-CN')}
+      {/* Header */}
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <h3 className="flex-1 truncate text-sm font-semibold leading-snug">{project.name}</h3>
+        <div className={cn('flex h-5 items-center gap-1.5 rounded-full px-2 ring-1', config.ring)}>
+          <span className={cn('h-1.5 w-1.5 rounded-full', config.dot)} />
+          <span className="text-[10px] font-medium text-muted-foreground">{config.label}</span>
         </div>
+      </div>
 
-        <div className="flex gap-1.5">
-          {project.status === 'done' && (
-            <>
-              {project.previewUrl && (
-                <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => window.open(project.previewUrl!, '_blank')}>
-                  预览
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => navigate(`/projects/${project.id}`)}>
-                打开
-              </Button>
-            </>
-          )}
-          {IN_PROGRESS.has(project.status) && (
-            <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs text-primary" onClick={() => navigate(`/projects/${project.id}`)}>
-              查看进度
-            </Button>
-          )}
-          {(project.status === 'idle' || project.status === 'waiting') && (
-            <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => navigate(`/projects/${project.id}`)}>
-              打开
-            </Button>
-          )}
-          {project.status === 'failed' && (
-            <>
-              <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={() => navigate(`/projects/${project.id}`)}>
-                重试
-              </Button>
-              <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs text-destructive" onClick={() => onDelete(project.id)}>
-                删除
-              </Button>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      {/* Date */}
+      <p className="mb-4 font-mono text-[11px] text-muted-foreground/60">
+        {new Date(project.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })}
+      </p>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        {project.status === 'done' && (
+          <>
+            {project.previewUrl && (
+              <ActionBtn label="预览" onClick={() => window.open(project.previewUrl!, '_blank')} />
+            )}
+            <ActionBtn label="打开" primary onClick={() => navigate(`/projects/${project.id}`)} />
+          </>
+        )}
+        {isActive && (
+          <ActionBtn label="查看进度" primary onClick={() => navigate(`/projects/${project.id}`)} />
+        )}
+        {(project.status === 'idle' || project.status === 'waiting') && (
+          <ActionBtn label="打开" onClick={() => navigate(`/projects/${project.id}`)} />
+        )}
+        {project.status === 'failed' && (
+          <>
+            <ActionBtn label="重试" onClick={() => navigate(`/projects/${project.id}`)} />
+            <ActionBtn label="删除" destructive onClick={() => onDelete(project.id)} />
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ActionBtn({ label, onClick, primary, destructive }: {
+  label: string
+  onClick: () => void
+  primary?: boolean
+  destructive?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
+        primary
+          ? 'bg-primary/10 text-primary hover:bg-primary/20'
+          : destructive
+            ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+      )}
+    >
+      {label}
+    </button>
   )
 }

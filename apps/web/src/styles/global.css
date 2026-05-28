@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
+/* Fonts loaded via <link> in index.html for correct CSS ordering */
+
 @theme {
+  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -20,53 +25,60 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  --radius: 0.5rem;
+  --color-surface: hsl(var(--surface));
+  --color-surface-foreground: hsl(var(--surface-foreground));
+  --radius: 0.625rem;
 }
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.6%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.6%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.6%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
+    /* Industrial Dark — default is dark mode */
+    --background: 225 15% 6%;
+    --foreground: 210 20% 95%;
+    --card: 225 14% 9%;
+    --card-foreground: 210 20% 95%;
+    --popover: 225 14% 9%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 32 95% 55%;
+    --primary-foreground: 225 15% 6%;
+    --secondary: 225 12% 14%;
+    --secondary-foreground: 210 15% 80%;
+    --muted: 225 12% 14%;
+    --muted-foreground: 215 12% 55%;
+    --accent: 32 95% 55%;
+    --accent-foreground: 225 15% 6%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.6%;
-    --radius: 0.5rem;
+    --border: 225 12% 16%;
+    --input: 225 12% 16%;
+    --ring: 32 95% 55%;
+    --surface: 225 13% 12%;
+    --surface-foreground: 210 15% 80%;
+    --radius: 0.625rem;
   }
 
-  .dark {
-    --background: 0 0% 3.6%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.6%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 98%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 72.2% 50.6%;
+  .light {
+    --background: 40 20% 98%;
+    --foreground: 225 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 225 15% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 15% 10%;
+    --primary: 25 90% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 225 15% 10%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 12% 45%;
+    --accent: 25 90% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 25 90% 48%;
+    --surface: 220 14% 96%;
+    --surface-foreground: 225 15% 10%;
   }
 }
 
@@ -76,7 +88,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 }
 
@@ -97,8 +109,10 @@ input, textarea {
   font-family: inherit;
 }
 
+/* ── Scrollbar (thin, subtle) ─────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -106,6 +120,93 @@ input, textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* ── Animations ────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px hsl(var(--primary) / 0.3); }
+  50%      { box-shadow: 0 0 20px hsl(var(--primary) / 0.6); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out both;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ── Utility: glass panel effect ──────────────────────────────── */
+.glass {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(12px) saturate(1.5);
+  border: 1px solid hsl(var(--border) / 0.6);
+}
+
+/* ── Utility: gradient text ────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(38 100% 65%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Agent Drawer slide-in ─────────────────────────────────────── */
+@keyframes drawer-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes drawer-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.agent-drawer {
+  animation: drawer-slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.agent-drawer-backdrop {
+  animation: drawer-backdrop-in 0.2s ease both;
+}
+
+/* ── Noise texture overlay ─────────────────────────────────────── */
+.noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }

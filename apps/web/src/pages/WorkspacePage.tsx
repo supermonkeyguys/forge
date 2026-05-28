@@ -26,7 +26,12 @@ export function WorkspacePage() {
   useAgentEvents(storeProjectId)
 
   return (
-    <div className="grid h-screen overflow-hidden [grid-template-columns:320px_1fr_480px]">
+    <div className="relative grid h-screen overflow-hidden bg-background [grid-template-columns:340px_1fr_480px]">
+      {/* Subtle ambient background glow */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 left-1/3 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-primary/3 blur-[150px]" />
+      </div>
+
       <ConversationPanel />
       <AgentFlowPanel />
       <PreviewPanel />
