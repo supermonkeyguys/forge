@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>需求确认 — Forge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+<div class="max-w-3xl mx-auto py-10 px-4">
+
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="text-xs font-semibold text-indigo-600 uppercase tracking-widest mb-1">
+      Forge · 需求放大
+    </div>
+    <h1 id="app-title" class="text-3xl font-bold text-gray-900"></h1>
+    <p id="app-desc" class="mt-2 text-gray-500 text-sm leading-relaxed"></p>
+    <div class="mt-3 flex gap-2 flex-wrap">
+      <span id="domain-badge"
+        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+      </span>
+    </div>
+  </div>
+
+  <!-- Constraints -->
+  <div id="constraints-section" class="mb-8 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+    <h2 class="text-sm font-semibold text-gray-700 mb-3">基础能力需求</h2>
+    <div id="constraints-grid" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+  </div>
+
+  <!-- Features -->
+  <div class="mb-8">
+    <h2 class="text-lg font-semibold text-gray-800 mb-1">功能清单</h2>
+    <p class="text-xs text-gray-400 mb-4">高置信度功能已自动勾选，你可以调整</p>
+    <div id="features-list" class="space-y-3"></div>
+  </div>
+
+  <!-- Clarifying Questions -->
+  <div id="questions-section" class="mb-10 hidden">
+    <h2 class="text-lg font-semibold text-gray-800 mb-1">需要澄清的问题</h2>
+    <p class="text-xs text-gray-400 mb-4">这些问题会影响技术架构，请确认</p>
+    <div id="questions-list" class="space-y-5"></div>
+  </div>
+
+  <!-- Submit -->
+  <button id="confirm-btn"
+    class="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl
+           transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+    确认需求，开始构建
+  </button>
+  <p id="status-msg" class="mt-3 text-center text-sm text-gray-400 hidden"></p>
+
+</div>
+
+<script>
+const DRAFT = __DRAFT_JSON__
+const JOB_ID = '__JOB_ID__'
+const CONFIRM_URL = '__CONFIRM_URL__'
+
+const CONFIDENCE_STYLE = {
+  high:   { bg: 'bg-green-50 border-green-200',   badge: 'bg-green-100 text-green-700',   label: '高' },
+  medium: { bg: 'bg-yellow-50 border-yellow-200', badge: 'bg-yellow-100 text-yellow-700', label: '中' },
+  low:    { bg: 'bg-gray-50 border-gray-200',     badge: 'bg-gray-100 text-gray-500',     label: '低' },
+}
+
+function render() {
+  document.getElementById('app-title').textContent = DRAFT.title
+  document.getElementById('app-desc').textContent = DRAFT.description
+  document.getElementById('domain-badge').textContent = DRAFT.business_domain
+  renderConstraints()
+  renderFeatures()
+  renderQuestions()
+}
+
+function renderConstraints() {
+  const labels = {
+    auth: '用户认证', database: '数据持久化', file_upload: '文件上传',
+    email: '邮件发送', payments: '支付功能',
+  }
+  const grid = document.getElementById('constraints-grid')
+  grid.innerHTML = Object.entries(DRAFT.constraints).map(([k, v]) => `
+    <div class="flex items-center gap-2 text-sm ${v ? 'text-gray-800' : 'text-gray-300'}">
+      <span>${v ? '✓' : '✗'}</span>
+      <span>${labels[k] || k}</span>
+    </div>
+  `).join('')
+}
+
+function renderFeatures() {
+  const list = document.getElementById('features-list')
+  list.innerHTML = DRAFT.features.map((f, i) => {
+    const style = CONFIDENCE_STYLE[f.confidence] || CONFIDENCE_STYLE.low
+    return `
+    <div class="p-4 bg-white rounded-xl border ${style.bg} shadow-sm">
+      <div class="flex items-start gap-3">
+        <input type="checkbox" id="feat-${i}" data-index="${i}"
+          class="mt-1 h-4 w-4 rounded text-indigo-600 border-gray-300 cursor-pointer"
+          ${f.selected ? 'checked' : ''} />
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <label for="feat-${i}" class="font-medium text-gray-900 cursor-pointer">${f.name}</label>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${style.badge}">
+              置信度：${style.label}
+            </span>
+          </div>
+          <ul class="mt-2 space-y-1">
+            ${f.acceptance_criteria.map(c => `
+              <li class="text-xs text-gray-500 flex gap-1.5">
+                <span class="text-gray-300 flex-shrink-0">→</span>
+                <span>${c}</span>
+              </li>
+            `).join('')}
+          </ul>
+          ${f.out_of_scope && f.out_of_scope.length > 0 ? `
+          <div class="mt-2 text-xs text-gray-400">
+            <span class="font-medium">不含：</span>${f.out_of_scope.join('、')}
+          </div>` : ''}
+        </div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function renderQuestions() {
+  const qs = DRAFT.clarifying_questions || []
+  if (qs.length === 0) return
+  document.getElementById('questions-section').classList.remove('hidden')
+  const list = document.getElementById('questions-list')
+  list.innerHTML = qs.map((q, qi) => {
+    if (q.type === 'text') {
+      return `
+      <div class="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+        <label class="block text-sm font-medium text-gray-800 mb-2">
+          ${q.required ? '<span class="text-red-500 mr-1">*</span>' : ''}${q.question}
+        </label>
+        <textarea data-qid="${q.id}" rows="2"
+          class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none
+                 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          placeholder="请输入..."></textarea>
+      </div>`
+    }
+    const isMultiple = q.type === 'multiple'
+    return `
+    <div class="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+      <p class="text-sm font-medium text-gray-800 mb-3">
+        ${q.required ? '<span class="text-red-500 mr-1">*</span>' : ''}${q.question}
+      </p>
+      <div class="space-y-2">
+        ${(q.options || []).map((opt) => `
+          <label class="flex items-start gap-3 cursor-pointer group">
+            <input type="${isMultiple ? 'checkbox' : 'radio'}"
+              name="q-${qi}" value="${opt}"
+              data-qid="${q.id}"
+              class="mt-0.5 h-4 w-4 text-indigo-600 border-gray-300 cursor-pointer" />
+            <span class="text-sm text-gray-700 group-hover:text-gray-900">${opt}</span>
+          </label>
+        `).join('')}
+      </div>
+    </div>`
+  }).join('')
+}
+
+function collectResult() {
+  const features = DRAFT.features.map((f, i) => ({
+    ...f,
+    selected: document.getElementById('feat-' + i)?.checked ?? f.selected,
+  }))
+
+  const answers = {}
+  const qs = DRAFT.clarifying_questions || []
+  qs.forEach(q => {
+    if (q.type === 'text') {
+      const el = document.querySelector(`textarea[data-qid="${q.id}"]`)
+      answers[q.id] = el ? el.value.trim() : ''
+    } else if (q.type === 'multiple') {
+      const checked = [...document.querySelectorAll(`input[data-qid="${q.id}"]:checked`)]
+      answers[q.id] = checked.map(el => el.value)
+    } else {
+      const checked = document.querySelector(`input[data-qid="${q.id}"]:checked`)
+      answers[q.id] = checked ? checked.value : ''
+    }
+  })
+
+  return { ...DRAFT, features, clarifying_answers: answers }
+}
+
+document.getElementById('confirm-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('confirm-btn')
+  const msg = document.getElementById('status-msg')
+  btn.disabled = true
+  btn.textContent = '提交中...'
+  msg.classList.remove('hidden')
+  msg.textContent = '正在提交需求确认...'
+
+  try {
+    const draft = collectResult()
+    const resp = await fetch(CONFIRM_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draft }),
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    msg.textContent = '✓ 已确认！正在启动构建...'
+    btn.textContent = '已确认，构建中...'
+    btn.classList.replace('bg-indigo-600', 'bg-green-600')
+  } catch (err) {
+    msg.textContent = '提交失败，请重试'
+    btn.disabled = false
+    btn.textContent = '确认需求，开始构建'
+  }
+})
+
+render()
+</script>
+
+</body>
+</html>
