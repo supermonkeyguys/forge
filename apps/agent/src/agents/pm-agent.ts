@@ -21,14 +21,6 @@ import type { Agent, AgentRunContext, AgentResult } from './types.js'
 
 // ── Draft Spec (before user review) ─────────────────────────────
 
-export interface ClarifyingQuestion {
-  id: string
-  question: string
-  type: 'single' | 'multiple' | 'text'
-  options?: string[]   // only for single/multiple
-  required: boolean
-}
-
 export interface DraftSpec {
   title: string
   description: string
@@ -80,6 +72,8 @@ const LLMDraftSchema = z.object({
     })
   ).optional().default([]),
 })
+
+export type ClarifyingQuestion = z.infer<typeof LLMDraftSchema>['clarifying_questions'][number]
 
 // ── System prompt ────────────────────────────────────────────────
 
@@ -134,7 +128,7 @@ export class PMAgent implements Agent {
       description: object.description,
       business_domain: object.business_domain,
       constraints: object.constraints,
-      clarifying_questions: object.clarifying_questions as ClarifyingQuestion[],
+      clarifying_questions: object.clarifying_questions,
       features: object.features.map((f) => ({
         ...f,
         out_of_scope: f.out_of_scope ?? [],
