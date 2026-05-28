@@ -218,7 +218,7 @@ async function notifyGoAPI(
   status: string,
   extras?: { previewUrl?: string; errorMsg?: string },
 ): Promise<void> {
-  const apiUrl = process.env['FORGE_API_URL'] ?? 'http://localhost:8080'
+  const apiUrl = process.env['FORGE_API_URL']
   if (!apiUrl) return
 
   const token = process.env['INTERNAL_TOKEN'] ?? ''
@@ -236,6 +236,7 @@ async function notifyGoAPI(
         ...(token ? { 'X-Internal-Token': token } : {}),
       },
       body,
+      signal: AbortSignal.timeout(5000),
     })
   } catch (err) {
     console.error(`[notifyGoAPI] failed to update task ${taskId} status to ${status}:`, err)
@@ -272,7 +273,7 @@ async function runJob(job: Job, userInput: string): Promise<void> {
   const orc = new Orchestrator(job.projectId, userInput, {
     sandbox: sandboxAdapter,
 
-    onStateChange: async (state: OrchestratorState, ctx: OrchestratorContext) => {
+    onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => {
       job.status = state
       if (ctx.reviewUrl) job.reviewUrl = ctx.reviewUrl    // sync reviewUrl from orchestrator context
       job.updatedAt = new Date().toISOString()
@@ -283,7 +284,9 @@ async function runJob(job: Job, userInput: string): Promise<void> {
             : state === 'aborted'
               ? { errorMsg: job.error ?? undefined }
               : undefined
-        await notifyGoAPI(job.taskId, state, extras)
+        notifyGoAPI(job.taskId, state, extras).catch((err: unknown) => {
+          console.error('[onStateChange] notifyGoAPI failed:', err)
+        })
       }
     },
 
