@@ -213,7 +213,7 @@ async function handleConfirmDraft(
 
 // ── Go API callback ─────────────────────────────────────────────────
 
-async function notifyGoAPI(
+export async function notifyGoAPI(
   taskId: string,
   status: string,
   extras?: { previewUrl?: string; errorMsg?: string },
