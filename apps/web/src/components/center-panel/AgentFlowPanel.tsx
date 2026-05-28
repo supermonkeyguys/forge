@@ -7,6 +7,7 @@ import {
   selectEvents,
   type AgentCardState,
 } from '../../store/workspace-store'
+import type { AgentRole } from '@forge/core'
 import { ScrollArea } from '../ui/scroll-area'
 import { cn } from '../../lib/utils'
 import { Icons } from '../ui/icons'
@@ -39,6 +40,40 @@ export function AgentFlowPanel() {
 
   const selectedCard = selectedRole ? agentCards[selectedRole] : null
 
+  const addEvent = useWorkspaceStore((s) => s.addEvent)
+  const setPhase = useWorkspaceStore((s) => s.setPhase)
+
+  function injectMockEvents() {
+    setPhase('running')
+
+    const roles: AgentRole[] = ['pm', 'architect', 'schema', 'logic', 'api', 'ui', 'page', 'test']
+    const doneRoles: AgentRole[] = ['pm', 'architect', 'schema']
+    const runningRole: AgentRole = 'logic'
+
+    for (const role of doneRoles) {
+      addEvent({ type: 'agent_start', agent: role, message: `${role} 开始执行` })
+      addEvent({
+        type: 'agent_thinking', agent: role,
+        content: `分析当前任务需求，梳理输入输出边界，确认依赖关系……这个 agent 需要处理若干核心逻辑，确保与其他 agent 的接口对齐。`,
+      })
+      addEvent({ type: 'agent_tool_use', agent: role, tool: 'read_file' })
+      addEvent({ type: 'agent_tool_use', agent: role, tool: 'write_file' })
+      addEvent({ type: 'agent_file_write', agent: role, file: `apps/web/src/${role}/index.ts`, action: 'create' })
+      addEvent({ type: 'agent_file_write', agent: role, file: `apps/web/src/${role}/types.ts`, action: 'create' })
+      addEvent({ type: 'agent_done', agent: role, summary: `完成了核心模块设计，输出 2 个文件，接口已对齐下游 agent。` })
+    }
+
+    addEvent({ type: 'agent_start', agent: runningRole, message: '开始执行业务逻辑' })
+    addEvent({
+      type: 'agent_thinking', agent: runningRole,
+      content: '正在分析业务规则，梳理数据流转链路，考虑边界条件和错误处理……',
+    })
+    addEvent({ type: 'agent_tool_use', agent: runningRole, tool: 'search_codebase' })
+
+    // remaining roles stay idle
+    void roles
+  }
+
   return (
     <div className="relative z-10 flex h-full flex-col overflow-hidden" data-panel="agent-flow">
       {/* Orchestrator status bar */}
@@ -47,7 +82,7 @@ export function AgentFlowPanel() {
       {/* Agent cards grid */}
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         {phase === 'input' || phase === 'pm-review' ? (
-          <IdleState />
+          <IdleState onMock={injectMockEvents} />
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
             {Object.values(agentCards).map((card, i) => (
@@ -257,7 +292,7 @@ function ProgressBar({ status }: { status: AgentCardState['status'] }) {
   )
 }
 
-function IdleState() {
+function IdleState({ onMock }: { onMock: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 text-muted-foreground">
       <div className="relative">
@@ -270,6 +305,14 @@ function IdleState() {
         <p className="text-sm font-medium">Agent 团队待命中</p>
         <p className="mt-1 text-xs text-muted-foreground/60">输入需求后，这里会展示每个 Agent 的实时进度</p>
       </div>
+      {import.meta.env.DEV && (
+        <button
+          onClick={onMock}
+          className="mt-2 rounded-lg border border-dashed border-border/60 px-4 py-2 text-xs text-muted-foreground/50 transition-colors hover:border-primary/40 hover:text-primary"
+        >
+          ⚡ Mock 数据（开发模式）
+        </button>
+      )}
     </div>
   )
 }
