@@ -102,47 +102,52 @@ export function RequirementInput() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6 px-5 py-6">
-      <div>
-        <h2 className="mb-2 text-xl font-semibold">描述你想做的 App</h2>
+    <div className="flex flex-1 flex-col gap-6 px-6 py-6">
+      <div className="animate-fade-in">
+        <h2 className="mb-2 text-xl font-semibold tracking-tight">描述你想做的 App</h2>
         <p className="text-sm text-muted-foreground">AI 会帮你补全细节，再由 Agent 团队协作生成</p>
       </div>
 
-      <Textarea
-        ref={textareaRef}
-        value={userInput}
-        onChange={(e) => setUserInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        rows={4}
-        className="min-h-[120px] resize-none text-sm leading-relaxed"
-      />
+      <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <Textarea
+          ref={textareaRef}
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          rows={4}
+          className="min-h-[120px] resize-none border-border/60 bg-background/50 text-sm leading-relaxed focus-visible:ring-primary/30"
+        />
+      </div>
 
-      <Button
-        onClick={handleSubmit}
-        disabled={!userInput.trim() || isLoading}
-        className="w-full"
-      >
-        {isLoading ? (
-          <span className="flex items-center gap-2">
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-            分析需求中...
-          </span>
-        ) : (
-          <span>生成应用 <kbd className="ml-1 text-xs opacity-60">⌘↵</kbd></span>
-        )}
-      </Button>
+      <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <Button
+          onClick={handleSubmit}
+          disabled={!userInput.trim() || isLoading}
+          className="w-full"
+        >
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+              分析需求中...
+            </span>
+          ) : (
+            <span>生成应用 <kbd className="ml-1.5 rounded bg-primary-foreground/10 px-1.5 py-0.5 text-[10px] font-mono">⌘↵</kbd></span>
+          )}
+        </Button>
+      </div>
 
-      <div>
-        <p className="mb-2 text-xs text-muted-foreground/60">试试这些：</p>
+      <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50">示例</p>
         <div className="flex flex-col gap-1">
           {PLACEHOLDER_EXAMPLES.map((ex) => (
             <button
               key={ex}
               onClick={() => setUserInput(ex)}
-              className="py-1 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="group flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
             >
-              → {ex}
+              <span className="h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors group-hover:bg-primary" />
+              {ex}
             </button>
           ))}
         </div>

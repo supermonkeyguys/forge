@@ -8,7 +8,7 @@ import {
 } from '../../store/workspace-store'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
-import { Badge } from '../ui/badge'
+import { Icons } from '../ui/icons'
 import { Checkbox } from '../ui/checkbox'
 import { ScrollArea } from '../ui/scroll-area'
 import { cn } from '../../lib/utils'
@@ -19,10 +19,10 @@ const CONFIDENCE_LABEL: Record<DraftFeature['confidence'], string> = {
   low:    '可选',
 }
 
-const CONFIDENCE_CLASS: Record<DraftFeature['confidence'], string> = {
-  high:   'text-green-500',
-  medium: 'text-primary',
-  low:    'text-muted-foreground',
+const CONFIDENCE_STYLE: Record<DraftFeature['confidence'], { text: string; bg: string }> = {
+  high:   { text: 'text-green-400', bg: 'bg-green-500/10' },
+  medium: { text: 'text-primary', bg: 'bg-primary/10' },
+  low:    { text: 'text-muted-foreground', bg: 'bg-muted' },
 }
 
 export function PMReview() {
@@ -76,36 +76,43 @@ export function PMReview() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="border-b border-border/50 px-5 pb-3 pt-4">
+      {/* Header */}
+      <div className="border-b border-border/40 px-6 pb-4 pt-5">
         <button
           onClick={() => setPhase('input')}
-          className="mb-1 text-sm text-muted-foreground hover:text-foreground"
+          className="mb-2 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
         >
-          ← 返回
+          <span className="text-[10px]">←</span> 返回编辑
         </button>
-        <h3 className="text-[15px] font-semibold">我理解你想做「{draft.title}」</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">以下功能由 AI 推导，确认后开始生成</p>
+        <h3 className="text-[15px] font-semibold tracking-tight">
+          我理解你想做「<span className="text-gradient">{draft.title}</span>」
+        </h3>
+        <p className="mt-1 text-xs text-muted-foreground">以下功能由 AI 推导，确认后开始锻造</p>
       </div>
 
-      <ScrollArea className="flex-1 px-5 py-3">
-        <div className="flex flex-col gap-4">
+      {/* Feature list */}
+      <ScrollArea className="min-h-0 flex-1 px-6 py-4">
+        <div className="flex flex-col gap-5">
+          {/* Constraints */}
           <div className="flex flex-wrap gap-1.5">
-            {draft.constraints.auth && <ConstraintBadge label="需要登录" />}
-            {draft.constraints.database && <ConstraintBadge label="需要数据库" />}
-            {draft.constraints.file_upload && <ConstraintBadge label="文件上传" />}
-            {draft.constraints.email && <ConstraintBadge label="邮件通知" />}
-            {draft.constraints.payments && <ConstraintBadge label="支付功能" />}
+            {draft.constraints.auth && <ConstraintChip label="需要登录" />}
+            {draft.constraints.database && <ConstraintChip label="需要数据库" />}
+            {draft.constraints.file_upload && <ConstraintChip label="文件上传" />}
+            {draft.constraints.email && <ConstraintChip label="邮件通知" />}
+            {draft.constraints.payments && <ConstraintChip label="支付功能" />}
           </div>
 
+          {/* Feature tiers */}
           {(['high', 'medium', 'low'] as const).map((tier) => {
             const features = byConfidence(tier)
             if (features.length === 0) return null
+            const style = CONFIDENCE_STYLE[tier]
             return (
               <div key={tier}>
-                <div className={cn('mb-1.5 text-[11px] font-semibold uppercase tracking-wide', CONFIDENCE_CLASS[tier])}>
+                <div className={cn('mb-2 inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider', style.bg, style.text)}>
                   {CONFIDENCE_LABEL[tier]}
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   {features.map((f) => (
                     <FeatureRow key={f.id} feature={f} onToggle={() => toggleFeature(f.id)} />
                   ))}
@@ -114,29 +121,32 @@ export function PMReview() {
             )
           })}
 
+          {/* Clarifying questions */}
           {draft.clarifying_questions.length > 0 && (
-            <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-3 py-2.5">
-              <p className="mb-1.5 text-xs text-yellow-500">⚠ AI 有几个疑问</p>
+            <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-yellow-400"><Icons.AlertTriangle className="h-3 w-3" /> AI 有几个疑问</p>
               {draft.clarifying_questions.map((q, i) => (
                 <p key={i} className="mb-0.5 text-xs text-muted-foreground">• {q}</p>
               ))}
             </div>
           )}
 
+          {/* Supplement */}
           <div>
-            <p className="mb-1.5 text-xs text-muted-foreground">还有什么要补充的？</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">还有什么要补充的？</p>
             <Textarea
               value={supplement}
               onChange={(e) => setSupplement(e.target.value)}
               placeholder="例如：需要支持多语言、要有黑暗模式..."
               rows={2}
-              className="resize-none text-sm"
+              className="resize-none border-border/40 bg-background/50 text-sm"
             />
           </div>
         </div>
       </ScrollArea>
 
-      <div className="border-t border-border/50 px-5 py-3">
+      {/* Confirm */}
+      <div className="border-t border-border/40 px-6 py-4">
         <Button
           onClick={handleConfirm}
           disabled={selectedCount === 0 || isStarting || isCreating}
@@ -144,7 +154,7 @@ export function PMReview() {
         >
           {isStarting || isCreating
             ? '启动中...'
-            : `确认并生成 (${selectedCount} 个功能)`
+            : `确认并开始锻造 (${selectedCount} 个功能)`
           }
         </Button>
       </div>
@@ -157,11 +167,13 @@ function FeatureRow({ feature, onToggle }: { feature: DraftFeature; onToggle: ()
 
   return (
     <div className={cn(
-      'overflow-hidden rounded border transition-all',
-      feature.selected ? 'border-border bg-card' : 'border-border/30 opacity-50'
+      'overflow-hidden rounded-xl border transition-all duration-200',
+      feature.selected
+        ? 'border-border/60 bg-card/80'
+        : 'border-border/20 opacity-40'
     )}>
       <div
-        className="flex cursor-pointer items-center gap-2.5 px-3 py-2"
+        className="flex cursor-pointer items-center gap-3 px-3.5 py-2.5"
         onClick={() => setExpanded(!expanded)}
       >
         <Checkbox
@@ -170,11 +182,14 @@ function FeatureRow({ feature, onToggle }: { feature: DraftFeature; onToggle: ()
           onClick={(e) => e.stopPropagation()}
         />
         <span className="flex-1 text-sm font-medium">{feature.name}</span>
-        <span className="text-xs text-muted-foreground">{expanded ? '▲' : '▼'}</span>
+        <span className={cn(
+          'text-[10px] text-muted-foreground transition-transform',
+          expanded && 'rotate-180'
+        )}>▾</span>
       </div>
 
       {expanded && (
-        <div className="flex flex-col gap-0.5 pb-2.5 pl-9 pr-3">
+        <div className="flex flex-col gap-0.5 border-t border-border/30 pb-3 pl-10 pr-4 pt-2">
           {feature.acceptance_criteria.map((c, i) => (
             <p key={i} className="text-xs text-muted-foreground">• {c}</p>
           ))}
@@ -184,8 +199,10 @@ function FeatureRow({ feature, onToggle }: { feature: DraftFeature; onToggle: ()
   )
 }
 
-function ConstraintBadge({ label }: { label: string }) {
+function ConstraintChip({ label }: { label: string }) {
   return (
-    <Badge variant="secondary" className="text-[11px]">{label}</Badge>
+    <span className="inline-flex items-center rounded-md border border-border/40 bg-secondary/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+      {label}
+    </span>
   )
 }
