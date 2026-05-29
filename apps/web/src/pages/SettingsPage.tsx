@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useGetSettings, useSaveSettings, useResetApiKey } from '@forge/core'
 import { useSettingsStore, THEME_PRESETS } from '../store/settings-store'
 import { Icons } from '../components/ui/icons'
@@ -163,12 +163,14 @@ function APIConfigSection() {
 
   const [baseUrl, setBaseUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
-  const [initialized, setInitialized] = useState(false)
+  const seededRef = useRef(false)
 
-  if (!isLoading && data && !initialized) {
-    setBaseUrl(data.baseUrl)
-    setInitialized(true)
-  }
+  useEffect(() => {
+    if (data && !seededRef.current) {
+      seededRef.current = true
+      setBaseUrl(data.baseUrl)
+    }
+  }, [data])
 
   const handleSave = () => {
     save(

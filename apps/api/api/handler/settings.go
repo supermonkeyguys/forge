@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/forge-ai/forge/api/api/middleware"
@@ -23,7 +24,7 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 
 	settings, err := h.repo.Get(r.Context(), userID)
-	if err == domain.ErrNotFound {
+	if errors.Is(err, domain.ErrNotFound) {
 		middleware.WriteJSON(w, http.StatusOK, map[string]any{
 			"baseUrl":   "",
 			"hasApiKey": false,
@@ -69,9 +70,16 @@ func (h *SettingsHandler) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Re-derive hasApiKey: use the newly-supplied key if present, otherwise check DB
+	hasKey := body.APIKey != ""
+	if !hasKey {
+		if existing, gErr := h.repo.Get(r.Context(), userID); gErr == nil {
+			hasKey = existing.HasAPIKey
+		}
+	}
 	middleware.WriteJSON(w, http.StatusOK, map[string]any{
 		"baseUrl":   body.BaseURL,
-		"hasApiKey": body.APIKey != "",
+		"hasApiKey": hasKey,
 	})
 }
 
