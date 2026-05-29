@@ -11,56 +11,13 @@ export function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('api')
 
   return (
-    <div className="flex h-screen bg-background">
-      <AppSidebar />
+    <div className="flex flex-1 overflow-hidden">
       <SettingsNav active={activeSection} onSelect={setActiveSection} />
       <div className="flex-1 overflow-y-auto p-10">
         {activeSection === 'api' && <APIConfigSection />}
         {activeSection === 'appearance' && <AppearanceSection />}
       </div>
     </div>
-  )
-}
-
-function AppSidebar() {
-  return (
-    <nav
-      className="w-[200px] flex-shrink-0 border-r border-white/[0.06] bg-white/[0.025]"
-      style={{ backdropFilter: 'blur(24px) saturate(160%)' }}
-    >
-      <div className="p-3 pt-4">
-        <p className="mb-1 px-2 text-[10.5px] font-semibold uppercase tracking-widest text-white/25">
-          工作区
-        </p>
-        <SidebarItem icon={<Icons.LayoutGrid className="h-3.5 w-3.5" />} label="项目" href="/projects" />
-        <SidebarItem icon={<Icons.MessageSquare className="h-3.5 w-3.5" />} label="对话" href="#" />
-        <p className="mb-1 mt-3 px-2 text-[10.5px] font-semibold uppercase tracking-widest text-white/25">
-          配置
-        </p>
-        <SidebarItem icon={<Icons.Cog className="h-3.5 w-3.5" />} label="设置" href="/settings" active />
-      </div>
-    </nav>
-  )
-}
-
-function SidebarItem({
-  icon, label, href, active,
-}: {
-  icon: React.ReactNode; label: string; href: string; active?: boolean
-}) {
-  return (
-    <a
-      href={href}
-      className={cn(
-        'flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors',
-        active
-          ? 'bg-primary/10 text-foreground'
-          : 'text-white/45 hover:bg-white/[0.06] hover:text-white/75',
-      )}
-    >
-      <span className={cn('opacity-55', active && 'opacity-100')}>{icon}</span>
-      {label}
-    </a>
   )
 }
 
