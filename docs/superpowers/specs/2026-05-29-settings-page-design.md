@@ -34,7 +34,7 @@ Entry point: settings icon in the app sidebar, navigates to `/settings`.
 
 ## Settings Categories
 
-### AI 服务 → API 配置
+### AI 服务 → API 配置 (icon: `KeyRound` from `lucide-react`)
 
 Fields:
 - **Base URL** — text input, editable, placeholder `https://api.openai.com/v1`
@@ -46,7 +46,7 @@ Behavior:
 - On load: `GET /api/v1/settings` returns `{ baseUrl, hasApiKey: boolean }` — key plaintext never returned
 - "重置" calls `DELETE /api/v1/settings/api-key`
 
-### 偏好 → 外观
+### 偏好 → 外观 (icon: `Palette` from `lucide-react`)
 
 Fields:
 - **主题色** — 4 color swatches: 橙色 `#f97316`, 蓝色 `#3b82f6`, 绿色 `#10b981`, 紫色 `#8b5cf6`
@@ -169,6 +169,21 @@ User selects theme color
 - API save failure → toast error "保存失败，请稍后重试"
 - `SETTINGS_ENCRYPTION_KEY` not set → Go server startup fails fast with a clear error message
 - `GET /api/v1/settings` 404 (first time) → treated as empty state, all fields blank
+
+---
+
+## Icons
+
+All icons use SVG components from `lucide-react` (already used in the codebase via `apps/web/src/components/ui/icons.tsx`). No emoji anywhere in the UI.
+
+| Location | Icon name | Usage |
+|----------|-----------|-------|
+| App sidebar — 设置 entry | `Settings` | 齿轮图标 |
+| Settings nav — 个人资料 | `User` | 用户图标 |
+| Settings nav — API 配置 | `KeyRound` | 钥匙图标 |
+| Settings nav — 外观 | `Palette` | 调色板图标 |
+| Settings nav — 通知 | `Bell` | 铃铛图标 |
+| "已配置" badge | `Check` | 对勾图标 |
 
 ---
 
