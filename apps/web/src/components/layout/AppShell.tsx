@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import { Icons } from '../ui/icons'
 
@@ -31,7 +31,24 @@ function NavItem({ to, icon, label, exact }: NavItemProps) {
   )
 }
 
+function BackButton() {
+  const navigate = useNavigate()
+  return (
+    <button
+      onClick={() => navigate(-1)}
+      title="返回"
+      className="relative flex h-9 w-9 items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/65"
+    >
+      <Icons.ChevronLeft className="h-[17px] w-[17px]" />
+    </button>
+  )
+}
+
 export function AppShell() {
+  const location = useLocation()
+  // Show back button when inside a project workspace (/projects/:id)
+  const isWorkspace = /^\/projects\/.+/.test(location.pathname)
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Fixed 52px global sidebar */}
@@ -39,7 +56,16 @@ export function AppShell() {
         className="flex w-[52px] flex-shrink-0 flex-col items-center gap-0.5 border-r border-white/[0.05] py-2"
         style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(24px)' }}
       >
-        <NavItem to="/projects" icon={<Icons.LayoutGrid className="h-[17px] w-[17px]" />} label="项目" />
+        {/* Top: back button when in workspace, otherwise projects icon */}
+        {isWorkspace ? (
+          <>
+            <BackButton />
+            <div className="my-0.5 h-px w-7 bg-white/[0.06]" />
+          </>
+        ) : (
+          <NavItem to="/projects" exact icon={<Icons.LayoutGrid className="h-[17px] w-[17px]" />} label="项目" />
+        )}
+
         <NavItem to="/conversations" icon={<Icons.MessageSquare className="h-[17px] w-[17px]" />} label="对话" />
         <div className="flex-1" />
         <div className="mb-1 h-px w-7 bg-white/[0.06]" />

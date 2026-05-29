@@ -238,6 +238,14 @@ function ExternalLink(props: IconProps) {
 }
 
 /** Chevron down */
+function ChevronLeft(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M15 18l-6-6 6-6" />
+    </Icon>
+  )
+}
+
 function ChevronDown(props: IconProps) {
   return (
     <Icon {...props}>
@@ -327,6 +335,7 @@ export const Icons = {
   Check,
   RefreshCw,
   ExternalLink,
+  ChevronLeft,
   ChevronDown,
   X,
   KeyRound,
