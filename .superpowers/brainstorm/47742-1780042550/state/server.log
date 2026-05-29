@@ -1,0 +1,6 @@
+{"type":"server-started","port":52609,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:52609","screen_dir":"/Users/cookie/project/forge/.superpowers/brainstorm/47742-1780042550/content","state_dir":"/Users/cookie/project/forge/.superpowers/brainstorm/47742-1780042550/state"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/47742-1780042550/content/app-shell-layout.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/47742-1780042550/content/projects-grouped.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/47742-1780042550/content/projects-kanban.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/47742-1780042550/content/projects-kanban-v2.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/47742-1780042550/content/kanban-animation.html"}

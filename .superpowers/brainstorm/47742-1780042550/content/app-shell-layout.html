@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0f14;
+    background-image:
+      radial-gradient(ellipse 50% 60% at 10% 40%, rgba(249,115,22,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 50% at 90% 60%, rgba(99,102,241,0.07) 0%, transparent 70%);
+    font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Titlebar */
+  .titlebar {
+    height: 40px;
+    background: rgba(255,255,255,0.02);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: flex; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #28c840; }
+  .brand {
+    margin-left: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #f97316;
+    letter-spacing: 0.05em;
+  }
+
+  /* App layout */
+  .app { display: flex; flex: 1; overflow: hidden; }
+
+  /* === GLOBAL SIDEBAR === */
+  .global-sidebar {
+    width: 52px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.025);
+    backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 2px;
+  }
+
+  .nav-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(255,255,255,0.35);
+    transition: all 0.15s;
+    position: relative;
+  }
+  .nav-icon:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); }
+  .nav-icon.active { background: rgba(249,115,22,0.15); color: #f97316; }
+  .nav-icon svg { width: 17px; height: 17px; }
+
+  .nav-spacer { flex: 1; }
+
+  .nav-divider {
+    width: 28px;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 4px 0;
+  }
+
+  /* Tooltip */
+  .nav-icon::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(30,32,40,0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e0e0e0;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 100;
+  }
+  .nav-icon:hover::after { opacity: 1; }
+
+  /* Main content area */
+  .main-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Projects page example */
+  .page-header {
+    padding: 28px 32px 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .page-title { font-size: 20px; font-weight: 700; color: rgba(255,255,255,0.9); }
+  .page-subtitle { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 3px; }
+
+  .btn {
+    background: linear-gradient(135deg, #f97316, #ea6d0e);
+    color: #0d0f14;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(249,115,22,0.3);
+  }
+
+  .projects-grid {
+    padding: 0 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: 24px;
+  }
+
+  .project-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85); margin-bottom: 4px; }
+  .card-status { font-size: 11px; color: rgba(255,255,255,0.35); }
+  .card-date { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 8px; }
+
+  /* Active indicator dot */
+  .nav-icon.active::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 16px;
+    background: #f97316;
+    border-radius: 0 2px 2px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="traffic-lights">
+    <div class="dot dot-red"></div>
+    <div class="dot dot-yellow"></div>
+    <div class="dot dot-green"></div>
+  </div>
+  <span class="brand">⬡ FORGE</span>
+</div>
+
+<div class="app">
+
+  <!-- Global sidebar — always visible -->
+  <nav class="global-sidebar">
+
+    <!-- Projects -->
+    <div class="nav-icon active" data-tip="项目">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+      </svg>
+    </div>
+
+    <!-- Workspace / 对话 -->
+    <div class="nav-icon" data-tip="对话">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </div>
+
+    <div class="nav-spacer"></div>
+    <div class="nav-divider"></div>
+
+    <!-- Settings -->
+    <div class="nav-icon" data-tip="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      </svg>
+    </div>
+
+  </nav>
+
+  <!-- Main content — changes per route -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">我的项目</div>
+        <div class="page-subtitle">6 个项目正在由 Agent 团队管理</div>
+      </div>
+      <button class="btn">+ 新建项目</button>
+    </div>
+    <div class="projects-grid">
+      <div class="project-card">
+        <div class="card-title">帮我做一个简单的电商后台</div>
+        <div class="card-status">待机</div>
+        <div class="card-date">2026年5月29日</div>
+      </div>
+      <div class="project-card">
+        <div class="card-title">我需要一个报销申请系统</div>
+        <div class="card-status">待机</div>
+        <div class="card-date">2026年5月29日</div>
+      </div>
+      <div class="project-card">
+        <div class="card-title">测试项目</div>
+        <div class="card-status">待机</div>
+        <div class="card-date">2026年5月29日</div>
+      </div>
+      <div class="project-card">
+        <div class="card-title">我想要一个预约系统</div>
+        <div class="card-status">待机</div>
+        <div class="card-date">2026年5月28日</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateProject } from '@forge/core'
+import { toast } from '../../store/toast-store'
 import {
   useWorkspaceStore,
   selectDraftSpec,
@@ -60,13 +61,16 @@ export function PMReview() {
         const projectId = result?.data?.id
         if (!projectId) {
           setIsStarting(false)
+          toast.error('创建项目失败，请重试')
           return
         }
+        toast.success('项目已创建，Agent 团队正在启动...')
         startGeneration(projectId)
         navigate(`/projects/${projectId}`)
       },
       onError: () => {
         setIsStarting(false)
+        toast.error('创建项目失败，请检查网络后重试')
       },
     })
   }

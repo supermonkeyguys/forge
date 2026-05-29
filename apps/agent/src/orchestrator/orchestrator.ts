@@ -67,6 +67,27 @@ export interface RunResult {
   validationReport: ValidationReport | null
 }
 
+// ── Spawned Task (in-process A2A Task object) ─────────────────────
+
+export interface SpawnedTask {
+  id: string
+  parentTaskId: string
+  depth: number
+  role: AgentRole
+  file: string
+  /** Resolves when the task completes (or rejects on failure). */
+  waitForCompletion(): Promise<void>
+}
+
+/** Callback injected into Builder agents so they can spawn sub-tasks. */
+export type SpawnTaskFn = (params: {
+  role: AgentRole
+  file: string
+  description: string
+  parentTaskId: string
+  currentDepth: number
+}) => SpawnedTask
+
 // ── Helpers ───────────────────────────────────────────────────────
 
 /**
@@ -129,6 +150,10 @@ export class Orchestrator {
   private lastErrors: string = ''
   private stalledCount = 0
 
+  // Dynamic spawn registry — maps taskId → { resolve, reject }
+  private spawnRegistry = new Map<string, { resolve: () => void; reject: (e: Error) => void }>()
+  private spawnCounter = 0
+
   constructor(projectId: string, userInput: string, deps: OrchestratorDeps) {
     this.ctx = createContext(projectId, userInput, deps.maxRetries ?? 3)
     this.deps = deps
@@ -166,6 +191,74 @@ export class Orchestrator {
 
   getState(): OrchestratorState { return this.ctx.state }
   getContext(): OrchestratorContext { return { ...this.ctx } }
+
+  /**
+   * Dynamically spawn a sub-task from within a Builder agent's tool-use loop.
+   * Depth is capped at 1 — spawned tasks cannot spawn further tasks.
+   * Executes immediately; caller awaits waitForCompletion() to suspend until done.
+   */
+  spawnTask(params: {
+    role: AgentRole
+    file: string
+    description: string
+    parentTaskId: string
+    currentDepth: number
+  }): SpawnedTask {
+    if (params.currentDepth >= 1) {
+      throw new Error(`spawn_task depth limit reached — spawned tasks cannot spawn further tasks`)
+    }
+
+    this.spawnCounter++
+    const taskId = `DT${String(this.spawnCounter).padStart(3, '0')}`
+
+    const task: PlanTask = {
+      id: taskId,
+      agent: params.role,
+      action: 'create',
+      file: params.file,
+      description: params.description,
+      depends_on: [],
+      status: 'pending',
+      parentTaskId: params.parentTaskId,
+      depth: params.currentDepth + 1,
+    }
+
+    this.emit({
+      type: 'agent_spawn',
+      agent: params.role,
+      spawnedRole: params.role,
+      file: params.file,
+      taskId,
+      parentTaskId: params.parentTaskId,
+    })
+
+    // Run the task asynchronously, resolve/reject the promise when done
+    let resolve!: () => void
+    let reject!: (e: Error) => void
+    const promise = new Promise<void>((res, rej) => { resolve = res; reject = rej })
+    this.spawnRegistry.set(taskId, { resolve, reject })
+
+    this.generateTaskCode(task)
+      .then((code) => this.commitTask(task, code))
+      .then(() => {
+        this.spawnRegistry.get(taskId)?.resolve()
+        this.spawnRegistry.delete(taskId)
+      })
+      .catch((err: unknown) => {
+        const e = err instanceof Error ? err : new Error(String(err))
+        this.spawnRegistry.get(taskId)?.reject(e)
+        this.spawnRegistry.delete(taskId)
+      })
+
+    return {
+      id: taskId,
+      parentTaskId: params.parentTaskId,
+      depth: params.currentDepth + 1,
+      role: params.role,
+      file: params.file,
+      waitForCompletion: () => promise,
+    }
+  }
 
   // ── Step dispatcher ───────────────────────────────────────────
 
@@ -326,10 +419,13 @@ export class Orchestrator {
       ? { ...task, description: task.description + `\n\nFix context:\n${errorContext}` }
       : task
 
+    const spawnFn: SpawnTaskFn = (params) => this.spawnTask(params)
+
     return (agent as any).executeTask(
       { task: taskWithContext, projectContext: context, existingFileContent: existingContent },
       this.deps.onEvent,
-      this.deps.sandbox,   // pass sandbox so agent can use tools
+      this.deps.sandbox,
+      spawnFn,
     )
   }
 

@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { useAuthStore, selectToken } from '../auth/auth-store.js'
-import type { AgentEvent, ProjectStatus } from '../types/index.js'
+import { useAuthStore, selectToken } from '../auth/auth-store.ts'
+import type { AgentEvent, ProjectStatus } from '../types/index.ts'
 
 interface UseAgentEventsResult {
   events: AgentEvent[]

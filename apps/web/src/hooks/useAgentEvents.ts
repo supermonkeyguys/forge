@@ -9,7 +9,7 @@
 
 import { useEffect } from 'react'
 import { useAuthStore, selectToken } from '@forge/core'
-import { useWorkspaceStore } from '../store/workspace-store.js'
+import { useWorkspaceStore } from '../store/workspace-store'
 import type { AgentEvent } from '@forge/core'
 
 export function useAgentEvents(projectId: string | null) {

@@ -1,0 +1,73 @@
+<h2>前端开发方案</h2>
+<p class="subtitle">B（补完缺失页面）+ C（UI 打磨）三种整体方案，请选一个</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>路由优先</h3>
+      <p>先搭好 <code>routes.tsx</code> + 路由守卫（未登录跳 /login），再实现 LoginPage（skip 模式）和 ProjectsPage，最后回头打磨现有 WorkspacePage 的细节。</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>应用骨架先完整，测试端到端流程早</li>
+            <li>各页面独立开发不互相阻塞</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>UI 打磨留到最后，容易被砍掉</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>页面 + 打磨并行</h3>
+      <p>路由 + LoginPage + ProjectsPage 一次性交付，同时把 WorkspacePage 的错误状态、空状态、动效也一起收尾。单次迭代全部完成。</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>一次完整交付，前端达到可演示状态</li>
+            <li>改动集中，不用多次切换上下文</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>scope 稍大，需要拆成明确子任务</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>WorkspacePage 打磨优先</h3>
+      <p>先把现有的 WorkspacePage 做到视觉完善（动效、错误状态、loading skeleton），再补路由和新页面。</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>核心页面质量高，演示效果好</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>没有路由，还是只能手动改代码切页面</li>
+            <li>LoginPage / ProjectsPage 继续缺席</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

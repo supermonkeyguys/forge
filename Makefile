@@ -31,15 +31,27 @@ setup:
 
 db-up:
 	docker compose up -d postgres
+	@echo "Waiting for postgres to be ready..."
+	@until docker compose exec postgres pg_isready -U forge -q; do sleep 1; done
+	@echo "✓ Postgres is ready"
 
 db-down:
 	docker compose down
 
+db-logs:
+	docker compose logs -f postgres
+
 db-migrate:
-	cd apps/api && go run ./cmd/migrate up
+	cd apps/api && go run ./cmd/migrate
 
 db-reset:
-	cd apps/api && go run ./cmd/migrate drop && go run ./cmd/migrate up
+	docker compose down -v
+	docker compose up -d postgres
+	@until docker compose exec postgres pg_isready -U forge -q; do sleep 1; done
+	cd apps/api && go run ./cmd/migrate
+
+db-psql:
+	docker compose exec postgres psql -U forge
 
 # ── Tests ────────────────────────────────────────────────────────
 

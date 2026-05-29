@@ -10,7 +10,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { User } from '../types/index.js'
+import type { User } from '../types/index.ts'
 
 interface AuthState {
   token: string | null

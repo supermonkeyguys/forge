@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0f14;
+    background-image:
+      radial-gradient(ellipse 50% 60% at 10% 40%, rgba(249,115,22,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 50% at 90% 60%, rgba(99,102,241,0.06) 0%, transparent 70%);
+    font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .titlebar {
+    height: 40px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; align-items: center; padding: 0 16px; gap: 8px; flex-shrink: 0;
+  }
+  .traffic-lights { display: flex; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #28c840; }
+  .brand { margin-left: 12px; font-size: 13px; font-weight: 700; color: #f97316; letter-spacing: 0.05em; }
+
+  .app { display: flex; flex: 1; overflow: hidden; }
+
+  .global-sidebar {
+    width: 52px; flex-shrink: 0;
+    background: rgba(255,255,255,0.02);
+    border-right: 1px solid rgba(255,255,255,0.05);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0; gap: 2px;
+  }
+  .nav-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: rgba(255,255,255,0.3);
+    position: relative;
+  }
+  .nav-icon.active { background: rgba(249,115,22,0.13); color: #f97316; }
+  .nav-icon.active::before {
+    content: ''; position: absolute; left: -1px; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 16px; background: #f97316; border-radius: 0 2px 2px 0;
+  }
+  .nav-icon svg { width: 17px; height: 17px; stroke-width: 1.5; }
+  .nav-spacer { flex: 1; }
+  .nav-divider { width: 28px; height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+
+  .main-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  .page-header {
+    padding: 22px 28px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+  .page-title { font-size: 17px; font-weight: 700; color: rgba(255,255,255,0.88); }
+  .page-subtitle { font-size: 11.5px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+
+  .hint {
+    font-size: 11.5px; color: rgba(249,115,22,0.7);
+    background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2);
+    border-radius: 6px; padding: 4px 12px;
+  }
+
+  .kanban-board {
+    flex: 1;
+    overflow-x: auto; overflow-y: hidden;
+    display: flex; gap: 14px;
+    padding: 20px 28px;
+    align-items: stretch;
+  }
+
+  .kanban-col {
+    flex-shrink: 0; width: 236px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .col-header {
+    display: flex; align-items: center; gap: 7px;
+    padding: 0 2px; flex-shrink: 0;
+  }
+  .col-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .col-dot.draft  { background: rgba(255,255,255,0.3); }
+  .col-dot.active { background: #f97316; box-shadow: 0 0 6px rgba(249,115,22,0.55); animation: blink 2s ease-in-out infinite; }
+  .col-dot.done   { background: #10b981; }
+  .col-dot.failed { background: #ef4444; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .col-title {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.38);
+  }
+  .col-count {
+    font-size: 11px; color: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.06);
+    border-radius: 9px; padding: 0 6px; margin-left: auto;
+  }
+
+  .col-lane {
+    flex: 1;
+    border: 1.5px dashed rgba(255,255,255,0.10);
+    border-radius: 14px;
+    padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow: hidden;  /* clip falling card at bottom edge */
+    background: rgba(255,255,255,0.01);
+    position: relative;
+  }
+  .col-lane.draft  { border-color: rgba(255,255,255,0.09); }
+  .col-lane.active { border-color: rgba(249,115,22,0.22); background: rgba(249,115,22,0.015); }
+  .col-lane.done   { border-color: rgba(16,185,129,0.20);  background: rgba(16,185,129,0.01); }
+  .col-lane.failed { border-color: rgba(239,68,68,0.18);   background: rgba(239,68,68,0.01); }
+
+  .lane-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 11.5px; color: rgba(255,255,255,0.16); font-style: italic;
+  }
+
+  /* ── Project card ── */
+  .project-card {
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.045);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 9px;
+    padding: 12px 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 8px rgba(0,0,0,0.18);
+    /* for animation */
+    position: relative;
+    transform-origin: center top;
+  }
+  .project-card:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.065); }
+  .project-card.clickable { cursor: pointer; }
+  .project-card.clickable:hover { border-color: rgba(249,115,22,0.4); }
+
+  .card-name {
+    font-size: 12.5px; font-weight: 500;
+    color: rgba(255,255,255,0.8); line-height: 1.4; margin-bottom: 8px;
+  }
+  .card-progress {
+    height: 2px; background: rgba(255,255,255,0.07);
+    border-radius: 1px; margin-bottom: 8px; overflow: hidden;
+  }
+  .card-progress-fill {
+    height: 100%; border-radius: 1px;
+    background: linear-gradient(90deg, #f97316, #fb923c);
+  }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; }
+  .card-date { font-size: 10.5px; color: rgba(255,255,255,0.22); }
+  .card-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+  .badge-draft  { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.38); }
+  .badge-active { background: rgba(249,115,22,0.14); color: #fb923c; }
+  .badge-done   { background: rgba(16,185,129,0.13); color: #34d399; }
+
+  /* ── ANIMATIONS ── */
+
+  /* 1. Exit: card falls down and fades out, clipped by lane overflow:hidden */
+  @keyframes fall-out {
+    0%   { transform: translateY(0)   scale(1);    opacity: 1; }
+    30%  { transform: translateY(6px) scale(0.98); opacity: 1; }
+    100% { transform: translateY(180px) scale(0.92); opacity: 0; }
+  }
+
+  /* 2. Other cards in source lane collapse upward after card is removed */
+  @keyframes collapse-gap {
+    0%   { transform: translateY(var(--gap)); }
+    100% { transform: translateY(0); }
+  }
+
+  /* 3. Enter: new card slides in from top and pushes others down */
+  @keyframes slide-in-top {
+    0%   { transform: translateY(-80px) scale(0.94); opacity: 0; }
+    60%  { transform: translateY(6px)   scale(1.01); opacity: 1; }
+    100% { transform: translateY(0)     scale(1);    opacity: 1; }
+  }
+
+  /* 4. Existing cards in target lane get nudged down */
+  @keyframes nudge-down {
+    0%   { transform: translateY(0); }
+    40%  { transform: translateY(var(--nudge)); }
+    100% { transform: translateY(0); }
+  }
+
+  .anim-fall-out {
+    animation: fall-out 0.42s cubic-bezier(0.4, 0, 0.8, 0.6) forwards;
+    pointer-events: none;
+  }
+
+  .anim-collapse {
+    animation: collapse-gap 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  .anim-slide-in {
+    animation: slide-in-top 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  }
+
+  .anim-nudge {
+    animation: nudge-down 0.4s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+  }
+
+  /* Trigger button style */
+  .trigger-btn {
+    position: absolute; bottom: 10px; right: 10px;
+    background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.3);
+    color: #f97316; border-radius: 6px; padding: 4px 10px;
+    font-size: 10.5px; cursor: pointer; transition: background 0.15s;
+    z-index: 10;
+  }
+  .trigger-btn:hover { background: rgba(249,115,22,0.25); }
+  .trigger-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="traffic-lights">
+    <div class="dot dot-red"></div>
+    <div class="dot dot-yellow"></div>
+    <div class="dot dot-green"></div>
+  </div>
+  <span class="brand">⬡ FORGE</span>
+</div>
+
+<div class="app">
+  <nav class="global-sidebar">
+    <div class="nav-icon active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+      </svg>
+    </div>
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-divider"></div>
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      </svg>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">我的项目</div>
+        <div class="page-subtitle">点击「开始运行」触发流转动画</div>
+      </div>
+      <span class="hint">点击草稿卡片底部按钮 → 流转到进行中</span>
+    </div>
+
+    <div class="kanban-board">
+
+      <!-- 草稿 -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-dot draft"></div>
+          <span class="col-title">草稿</span>
+          <span id="draft-count" class="col-count">3</span>
+        </div>
+        <div class="col-lane draft" id="lane-draft">
+          <div class="project-card" id="card-A">
+            <div class="card-name">帮我做一个电商后台</div>
+            <div class="card-footer">
+              <span class="card-date">5月29日</span>
+              <span class="card-badge badge-draft">待机</span>
+            </div>
+            <button class="trigger-btn" onclick="transferCard('card-A', 'lane-draft', 'lane-active', 'draft-count', 'active-count', 'badge-active', '分析中')">▶ 开始运行</button>
+          </div>
+          <div class="project-card" id="card-B">
+            <div class="card-name">我想要一个预约系统</div>
+            <div class="card-footer">
+              <span class="card-date">5月28日</span>
+              <span class="card-badge badge-draft">待机</span>
+            </div>
+            <button class="trigger-btn" onclick="transferCard('card-B', 'lane-draft', 'lane-active', 'draft-count', 'active-count', 'badge-active', '规划中')">▶ 开始运行</button>
+          </div>
+          <div class="project-card" id="card-C">
+            <div class="card-name">企业内部知识库平台</div>
+            <div class="card-footer">
+              <span class="card-date">5月27日</span>
+              <span class="card-badge badge-draft">待机</span>
+            </div>
+            <button class="trigger-btn" onclick="transferCard('card-C', 'lane-draft', 'lane-active', 'draft-count', 'active-count', 'badge-active', '分析中')">▶ 开始运行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 进行中 -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-dot active"></div>
+          <span class="col-title">进行中</span>
+          <span id="active-count" class="col-count">2</span>
+        </div>
+        <div class="col-lane active" id="lane-active">
+          <div class="project-card" id="card-D">
+            <div class="card-name">报销申请系统</div>
+            <div class="card-progress"><div class="card-progress-fill" style="width:65%"></div></div>
+            <div class="card-footer">
+              <span class="card-date">5月29日</span>
+              <span class="card-badge badge-active">构建中</span>
+            </div>
+            <button class="trigger-btn" onclick="transferCard('card-D', 'lane-active', 'lane-done', 'active-count', 'done-count', 'badge-done', '已完成')">✓ 完成</button>
+          </div>
+          <div class="project-card" id="card-E">
+            <div class="card-name">客户管理系统</div>
+            <div class="card-progress"><div class="card-progress-fill" style="width:30%"></div></div>
+            <div class="card-footer">
+              <span class="card-date">5月29日</span>
+              <span class="card-badge badge-active">规划中</span>
+            </div>
+            <button class="trigger-btn" onclick="transferCard('card-E', 'lane-active', 'lane-done', 'active-count', 'done-count', 'badge-done', '已完成')">✓ 完成</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 已完成 -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-dot done"></div>
+          <span class="col-title">已完成</span>
+          <span id="done-count" class="col-count">1</span>
+        </div>
+        <div class="col-lane done" id="lane-done">
+          <div class="project-card" id="card-F">
+            <div class="card-name">客户反馈收集系统</div>
+            <div class="card-footer">
+              <span class="card-date">5月20日</span>
+              <span class="card-badge badge-done">已完成</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 失败 -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-dot failed"></div>
+          <span class="col-title">失败</span>
+          <span class="col-count">0</span>
+        </div>
+        <div class="col-lane failed" id="lane-failed">
+          <div class="lane-empty" id="empty-failed">暂无失败项目</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+let animating = false
+
+function transferCard(cardId, fromLaneId, toLaneId, fromCountId, toCountId, newBadgeClass, newBadgeText) {
+  if (animating) return
+  animating = true
+
+  const card = document.getElementById(cardId)
+  const fromLane = document.getElementById(fromLaneId)
+  const toLane = document.getElementById(toLaneId)
+  const fromCount = document.getElementById(fromCountId)
+  const toCount = document.getElementById(toCountId)
+
+  // Disable all trigger buttons during animation
+  document.querySelectorAll('.trigger-btn').forEach(b => b.disabled = true)
+
+  // ── Phase 1: card falls down (clipped by lane overflow:hidden) ──
+  const cardHeight = card.offsetHeight + 8 // 8 = gap
+
+  card.classList.add('anim-fall-out')
+
+  // Siblings below the card in source lane — they'll close the gap
+  const siblings = Array.from(fromLane.children).filter(el =>
+    el !== card &&
+    el.getBoundingClientRect().top > card.getBoundingClientRect().top
+  )
+
+  // After fall animation ends, remove card from source and insert in target
+  card.addEventListener('animationend', function onFallEnd(e) {
+    if (e.animationName !== 'fall-out') return
+    card.removeEventListener('animationend', onFallEnd)
+
+    // ── Phase 1b: siblings collapse upward ──
+    siblings.forEach(sib => {
+      sib.style.setProperty('--gap', `-${cardHeight}px`)
+      sib.classList.add('anim-collapse')
+      sib.addEventListener('animationend', () => sib.classList.remove('anim-collapse'), { once: true })
+    })
+
+    // Remove card from source lane
+    fromLane.removeChild(card)
+    card.classList.remove('anim-fall-out')
+
+    // Update badge
+    const badge = card.querySelector('.card-badge')
+    badge.className = `card-badge ${newBadgeClass}`
+    badge.textContent = newBadgeText
+
+    // Update progress bar if going to done
+    const prog = card.querySelector('.card-progress')
+    if (prog && newBadgeClass === 'badge-done') {
+      prog.querySelector('.card-progress-fill').style.width = '100%'
+    }
+
+    // Update trigger button text if applicable
+    const btn = card.querySelector('.trigger-btn')
+    if (btn) btn.remove() // remove button once moved
+
+    // ── Phase 2: nudge existing cards in target lane down ──
+    const targetCards = Array.from(toLane.children).filter(el => !el.classList.contains('lane-empty'))
+    const newCardHeight = card.offsetHeight + 8
+
+    targetCards.forEach(tc => {
+      tc.style.setProperty('--nudge', `${newCardHeight}px`)
+      tc.classList.add('anim-nudge')
+      tc.addEventListener('animationend', () => tc.classList.remove('anim-nudge'), { once: true })
+    })
+
+    // Remove empty placeholder if present
+    const emptyEl = toLane.querySelector('.lane-empty')
+    if (emptyEl) toLane.removeChild(emptyEl)
+
+    // ── Phase 3: insert card at top of target lane ──
+    toLane.insertBefore(card, toLane.firstChild)
+    card.classList.add('anim-slide-in')
+    card.addEventListener('animationend', function onSlideEnd(e) {
+      if (e.animationName !== 'slide-in-top') return
+      card.removeEventListener('animationend', onSlideEnd)
+      card.classList.remove('anim-slide-in')
+
+      // Update counts
+      fromCount.textContent = parseInt(fromCount.textContent) - 1
+      toCount.textContent   = parseInt(toCount.textContent)   + 1
+
+      // Re-enable buttons
+      document.querySelectorAll('.trigger-btn').forEach(b => b.disabled = false)
+      animating = false
+    })
+  })
+}
+</script>
+</body>
+</html>

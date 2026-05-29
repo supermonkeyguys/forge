@@ -6,11 +6,11 @@ import (
 )
 
 type User struct {
-	ID        string
-	Email     string
-	Name      string
-	Password  string // bcrypt hash, never plaintext
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Name      string    `json:"name"`
+	Password  string    `json:"-"` // bcrypt hash, never exposed in JSON
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 var emailRe = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -21,5 +21,5 @@ func ValidEmail(email string) bool {
 }
 
 func ValidPassword(password string) bool {
-	return len(password) >= 8
+	return len(password) >= 8 && len(password) <= 72
 }

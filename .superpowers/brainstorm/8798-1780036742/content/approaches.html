@@ -1,0 +1,40 @@
+<h2>设置页实现方案</h2>
+<p class="subtitle">三种架构方向，各有侧重——选你最认可的</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>最小改动方案（推荐）</h3>
+      <p>新增 <code>/settings</code> 路由页，前端存主题色到 localStorage，AI 配置（Key + Base URL）通过新增 Go API 端点 <code>PUT /api/v1/settings</code> 保存到数据库（加密存储）。新增一个 <code>settings-store.ts</code> 管理前端状态，主题色通过操作 CSS 变量实现实时预览。后端新增 User Settings 表。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>改动范围清晰</li><li>主题响应快（纯前端）</li><li>Key 安全（只走后端）</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>主题色无法多设备同步</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>全量后端方案</h3>
+      <p>所有设置（包括主题色）都存数据库，登录后从 <code>GET /api/v1/settings</code> 拉取，写入 CSS 变量。好处是多设备同步，但主题色需等 API 响应才生效，可能出现短暂白屏/闪烁（FOUC）。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>设置跨设备一致</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>主题加载有延迟</li><li>后端改动更大</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>混合方案</h3>
+      <p>主题色存 localStorage（即时响应），AI Key + Base URL 存后端加密数据库，两套存储分开管理。同方案 A，但更明确区分"外观设置"和"服务配置"两个不同的关注点。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>最佳用户体验</li><li>安全性有保障</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>两套持久化逻辑</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

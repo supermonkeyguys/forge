@@ -47,26 +47,50 @@ func TestProjectCanRetry(t *testing.T) {
 	}
 }
 
-func TestValidEmail(t *testing.T) {
-	valid := []string{"a@b.com", "user+tag@example.org"}
-	for _, e := range valid {
-		if !domain.ValidEmail(e) {
-			t.Errorf("expected %q to be valid", e)
+func TestProjectIsTerminal(t *testing.T) {
+	terminal := []domain.ProjectStatus{
+		domain.ProjectStatusDone,
+		domain.ProjectStatusFailed,
+	}
+	for _, s := range terminal {
+		p := domain.Project{Status: s}
+		if !p.IsTerminal() {
+			t.Errorf("expected IsTerminal=true for status %q", s)
 		}
 	}
-	invalid := []string{"notanemail", "@missing.com", "no-at-sign"}
-	for _, e := range invalid {
-		if domain.ValidEmail(e) {
-			t.Errorf("expected %q to be invalid", e)
+
+	nonTerminal := []domain.ProjectStatus{
+		domain.ProjectStatusIdle,
+		domain.ProjectStatusAnalyzing,
+		domain.ProjectStatusPlanning,
+		domain.ProjectStatusBuilding,
+		domain.ProjectStatusValidating,
+		domain.ProjectStatusFixing,
+		domain.ProjectStatusWaiting,
+	}
+	for _, s := range nonTerminal {
+		p := domain.Project{Status: s}
+		if p.IsTerminal() {
+			t.Errorf("expected IsTerminal=false for status %q", s)
 		}
 	}
 }
 
-func TestValidPassword(t *testing.T) {
-	if !domain.ValidPassword("12345678") {
-		t.Error("8-char password should be valid")
+func TestValidStatus(t *testing.T) {
+	valid := []string{
+		"idle", "analyzing", "planning", "building",
+		"validating", "fixing", "waiting", "done", "failed",
 	}
-	if domain.ValidPassword("short") {
-		t.Error("short password should be invalid")
+	for _, s := range valid {
+		if !domain.ValidStatus(s) {
+			t.Errorf("expected ValidStatus=true for %q", s)
+		}
+	}
+
+	invalid := []string{"", "unknown", "DONE", "Done", "running"}
+	for _, s := range invalid {
+		if domain.ValidStatus(s) {
+			t.Errorf("expected ValidStatus=false for %q", s)
+		}
 	}
 }

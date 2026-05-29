@@ -1,0 +1,11 @@
+{
+  "source": "market",
+  "id": 536,
+  "alias": "Vercel-React最佳实践",
+  "intro": "来自Vercel工程团队的React和Next.js性能优化指南。在编写、审查或重构React/Next.js代码时使用以确保最优性能模式。包括组件优化、数据获取和包优化。",
+  "creator": "liumingyu04",
+  "visibility": "public",
+  "updateTime": "1773925543000",
+  "downloadTime": 1779938958353,
+  "location": "project"
+}

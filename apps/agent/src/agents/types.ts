@@ -16,7 +16,8 @@ export type ProgressEvent =
   | { type: "agent_start"; agent: AgentRole; message: string }
   | { type: "agent_thinking"; agent: AgentRole; content: string }
   | { type: "agent_tool_use"; agent: AgentRole; tool: string; input: unknown }
-  | { type: "agent_file_write"; agent: AgentRole; file: string }
+  | { type: "agent_file_write"; agent: AgentRole; file: string; action?: 'create' | 'modify' }
+  | { type: "agent_spawn"; agent: AgentRole; spawnedRole: AgentRole; file: string; taskId: string; parentTaskId: string }
   | { type: "agent_done"; agent: AgentRole; summary: string }
   | { type: "agent_error"; agent: AgentRole; error: string };
 

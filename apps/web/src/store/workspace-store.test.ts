@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore, selectPhase, selectAgentCards } from './workspace-store.js'
+import { useWorkspaceStore, selectPhase, selectAgentCards } from './workspace-store'
 import type { AgentEvent } from '@forge/core'
 
 beforeEach(() => {

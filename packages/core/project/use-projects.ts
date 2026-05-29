@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
-import { api } from '../api/client.js'
-import { parseWithFallback } from '../api/schema.js'
-import { useAuthStore, selectToken } from '../auth/auth-store.js'
-import type { Project } from '../types/index.js'
+import { api } from '../api/client.ts'
+import { parseWithFallback } from '../api/schema.ts'
+import { useAuthStore, selectToken } from '../auth/auth-store.ts'
+import type { Project } from '../types/index.ts'
 
 const ProjectSchema = z.object({
   id: z.string(),

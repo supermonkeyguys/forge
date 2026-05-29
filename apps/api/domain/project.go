@@ -18,13 +18,13 @@ const (
 )
 
 type Project struct {
-	ID         string
-	Name       string
-	UserID     string
-	Status     ProjectStatus
-	PreviewURL string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	UserID     string        `json:"userId"`
+	Status     ProjectStatus `json:"status"`
+	PreviewURL string        `json:"previewUrl"`
+	CreatedAt  time.Time     `json:"createdAt"`
+	UpdatedAt  time.Time     `json:"updatedAt"`
 }
 
 // Pure business functions — no DB calls, directly testable.

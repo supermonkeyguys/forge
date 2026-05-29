@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a1a; font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
+
+  /* Title bar */
+  .titlebar {
+    height: 40px;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    -webkit-app-region: drag;
+    border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: flex; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #28c840; }
+  .tab {
+    margin-left: 16px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab svg { opacity: 0.6; }
+
+  /* Main layout: 3 columns */
+  .layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Col 1: App sidebar */
+  .sidebar {
+    width: 220px;
+    background: #1e1e1e;
+    border-right: 1px solid #2a2a2a;
+    padding: 12px 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #555;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 12px 16px 6px;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+    border-radius: 0;
+  }
+  .sidebar-item:hover { background: #252525; color: #ccc; }
+  .sidebar-item.active { background: #2a2a2a; color: #e0e0e0; }
+  .sidebar-item svg { opacity: 0.5; flex-shrink: 0; }
+  .sidebar-item.active svg { opacity: 0.9; }
+
+  /* Col 2: Settings nav */
+  .settings-nav {
+    width: 220px;
+    background: #1e1e1e;
+    border-right: 1px solid #2a2a2a;
+    padding: 16px 0;
+    flex-shrink: 0;
+  }
+  .settings-nav-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e0e0e0;
+    padding: 0 16px 16px;
+  }
+  .settings-nav-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #555;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 12px 16px 6px;
+  }
+  .settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+  }
+  .settings-nav-item:hover { background: #252525; color: #ccc; }
+  .settings-nav-item.active {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-right: 2px solid #f97316;
+  }
+  .settings-nav-item .nav-icon { font-size: 14px; width: 18px; text-align: center; opacity: 0.7; }
+  .settings-nav-item.active .nav-icon { opacity: 1; }
+
+  /* Col 3: Content */
+  .content {
+    flex: 1;
+    padding: 32px 40px;
+    overflow-y: auto;
+    background: #1a1a1a;
+  }
+
+  .content-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e8e8e8;
+    margin-bottom: 24px;
+  }
+
+  .section-card {
+    background: #222;
+    border: 1px solid #2e2e2e;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+
+  .field-label {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .field-row { margin-bottom: 16px; }
+  .field-row:last-child { margin-bottom: 0; }
+
+  .mock-input {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #ccc;
+    font-family: 'SF Mono', monospace;
+  }
+
+  .mock-input.masked {
+    color: #555;
+    letter-spacing: 2px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .badge-configured {
+    flex-shrink: 0;
+    background: #1d2d1d;
+    border: 1px solid #2a4a2a;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #5a9a5a;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: #f97316;
+    color: #111;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: #999;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .action-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  /* Theme swatches */
+  .swatches {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .swatch-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    transition: transform 0.1s;
+  }
+
+  .swatch.active {
+    box-shadow: 0 0 0 2px #1a1a1a, 0 0 0 4px white;
+  }
+
+  .swatch-label {
+    font-size: 11px;
+    color: #666;
+  }
+
+  .section-description {
+    font-size: 12px;
+    color: #555;
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<!-- Titlebar -->
+<div class="titlebar">
+  <div class="traffic-lights">
+    <div class="dot dot-red"></div>
+    <div class="dot dot-yellow"></div>
+    <div class="dot dot-green"></div>
+  </div>
+  <div class="tab">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    Settings
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- Col 1: App sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section-label">工作区</div>
+    <div class="sidebar-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      项目
+    </div>
+    <div class="sidebar-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      任务
+    </div>
+    <div class="sidebar-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      对话
+    </div>
+
+    <div class="sidebar-section-label" style="margin-top:8px">配置</div>
+    <div class="sidebar-item active">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      设置
+    </div>
+  </div>
+
+  <!-- Col 2: Settings nav -->
+  <div class="settings-nav">
+    <div class="settings-nav-title">设置</div>
+
+    <div class="settings-nav-group-label">账号</div>
+    <div class="settings-nav-item">
+      <span class="nav-icon">👤</span> 个人资料
+    </div>
+
+    <div class="settings-nav-group-label" style="margin-top:8px">AI 服务</div>
+    <div class="settings-nav-item active">
+      <span class="nav-icon">🔑</span> API 配置
+    </div>
+
+    <div class="settings-nav-group-label" style="margin-top:8px">偏好</div>
+    <div class="settings-nav-item">
+      <span class="nav-icon">🎨</span> 外观
+    </div>
+    <div class="settings-nav-item">
+      <span class="nav-icon">🔔</span> 通知
+    </div>
+  </div>
+
+  <!-- Col 3: Content — API Config -->
+  <div class="content">
+    <div class="content-title">API 配置</div>
+
+    <div class="section-card">
+      <div class="field-row">
+        <div class="field-label">Base URL</div>
+        <div class="mock-input">https://api.openai.com/v1</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label">API Key</div>
+        <div class="input-row">
+          <div class="mock-input masked" style="flex:1">••••••••••••••••••••••••••••••••</div>
+          <div class="badge-configured">✓ 已配置</div>
+        </div>
+        <p class="section-description">Key 加密存储于服务器，前端不可读取。如需更换请直接填入新值覆盖。</p>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-secondary">重置</button>
+        <button class="btn-primary">保存</button>
+      </div>
+    </div>
+
+    <!-- Appearance preview (greyed out, not active) -->
+    <div class="content-title" style="margin-top:32px;color:#555;font-size:14px">外观（点击左侧切换）</div>
+    <div class="section-card" style="opacity:0.4;pointer-events:none">
+      <div class="field-label">主题色</div>
+      <div class="swatches">
+        <div class="swatch-wrap">
+          <div class="swatch active" style="background:#f97316"></div>
+          <span class="swatch-label">橙色</span>
+        </div>
+        <div class="swatch-wrap">
+          <div class="swatch" style="background:#3b82f6"></div>
+          <span class="swatch-label">蓝色</span>
+        </div>
+        <div class="swatch-wrap">
+          <div class="swatch" style="background:#10b981"></div>
+          <span class="swatch-label">绿色</span>
+        </div>
+        <div class="swatch-wrap">
+          <div class="swatch" style="background:#8b5cf6"></div>
+          <span class="swatch-label">紫色</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

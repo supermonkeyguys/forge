@@ -3,6 +3,7 @@ package middleware
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/forge-ai/forge/api/domain"
@@ -23,12 +24,17 @@ type errorDetail struct {
 // All handlers must call this instead of writing their own error responses.
 func WriteError(w http.ResponseWriter, err error) {
 	status, code := domainErrToHTTP(err)
+	msg := err.Error()
+	if status == http.StatusInternalServerError {
+		slog.Error("internal server error", "error", err)
+		msg = "an internal error occurred"
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(errorResponse{
 		Error: errorDetail{
 			Code:    code,
-			Message: err.Error(),
+			Message: msg,
 		},
 	})
 }

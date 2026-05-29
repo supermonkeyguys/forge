@@ -4,10 +4,10 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
-import { api } from '../api/client.js'
-import { parseWithFallback } from '../api/schema.js'
-import { useAuthStore, selectToken } from './auth-store.js'
-import type { User } from '../types/index.js'
+import { api } from '../api/client.ts'
+import { parseWithFallback } from '../api/schema.ts'
+import { useAuthStore, selectToken } from './auth-store.ts'
+import type { User } from '../types/index.ts'
 
 const UserSchema = z.object({
   data: z.object({

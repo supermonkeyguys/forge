@@ -1,9 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
 import { z } from 'zod'
-import { api } from '../api/client.js'
-import { parseWithFallback } from '../api/schema.js'
-import { useAuthStore } from './auth-store.js'
-import type { AuthToken } from '../types/index.js'
+import { api } from '../api/client.ts'
+import { parseWithFallback } from '../api/schema.ts'
+import { useAuthStore } from './auth-store.ts'
+import type { AuthToken } from '../types/index.ts'
 
 const AuthTokenSchema = z.object({
   data: z.object({

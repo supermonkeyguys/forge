@@ -1,0 +1,83 @@
+<h2>迁移设计：shadcn/ui + Tailwind</h2>
+<p class="subtitle">全量迁移方案预览 — 11 个文件，3 个阶段</p>
+
+<div class="section">
+  <span class="label">需要引入的 shadcn 组件</span>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Button</div>
+      <div style="font-size:11px;color:#888">LoginPage, PMReview, ProjectsPage, RequirementInput, ConversationHistory, PreviewPanel, ProjectCard</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Input</div>
+      <div style="font-size:11px;color:#888">LoginPage, ConversationHistory</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Textarea</div>
+      <div style="font-size:11px;color:#888">RequirementInput, PMReview</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Card</div>
+      <div style="font-size:11px;color:#888">ProjectCard, AgentCard, LoginPage</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Badge</div>
+      <div style="font-size:11px;color:#888">ProjectCard (状态标签), PMReview (ConstraintBadge), AgentFlowPanel</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Separator</div>
+      <div style="font-size:11px;color:#888">面板边界分隔线</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">ScrollArea</div>
+      <div style="font-size:11px;color:#888">AgentFlowPanel 日志, ConversationHistory 事件列表</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Checkbox</div>
+      <div style="font-size:11px;color:#888">PMReview FeatureRow (手写 checkbox → shadcn)</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">cn() 工具函数</div>
+      <div style="font-size:11px;color:#888">clsx + tailwind-merge，所有组件共用</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <span class="label">3 阶段迁移顺序</span>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:rgba(91,110,245,0.08);border:1px solid rgba(91,110,245,0.2);border-radius:8px">
+      <div style="width:24px;height:24px;border-radius:50%;background:rgba(91,110,245,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">基础设施</div>
+        <div style="font-size:12px;color:#888">安装 Tailwind v4 + shadcn/ui，生成 components.json，删除 global.css 旧 token，建立 <code>lib/utils.ts</code> (cn)，add 9 个 shadcn 组件</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px">
+      <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:normal;font-size:12px;font-weight:700;flex-shrink:0;justify-content:center">2</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">页面层（3 个页面）</div>
+        <div style="font-size:12px;color:#888">LoginPage → ProjectsPage → WorkspacePage。inline style 全换 Tailwind，Button/Input/Card 换 shadcn</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px">
+      <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">组件层（8 个组件）</div>
+        <div style="font-size:12px;color:#888">ConversationPanel → RequirementInput → PMReview → ConversationHistory → AgentFlowPanel → PreviewPanel → ProjectCard → project-page-states</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <span class="label">重要决策</span>
+  <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12px;color:#aaa">
+    <div style="display:flex;gap:8px"><span style="color:#4ade80">✓</span><span>Tailwind v4（CSS-first config，无 tailwind.config.js）</span></div>
+    <div style="display:flex;gap:8px"><span style="color:#4ade80">✓</span><span>shadcn 暗色主题 CSS 变量完全替换 global.css 现有 token</span></div>
+    <div style="display:flex;gap:8px"><span style="color:#4ade80">✓</span><span>WorkspacePage 三栏布局保留 grid，只换样式写法</span></div>
+    <div style="display:flex;gap:8px"><span style="color:#4ade80">✓</span><span>packages/ui/ 现有组件暂不动（前端未使用），迁移后可统一重写</span></div>
+    <div style="display:flex;gap:8px"><span style="color:#fbbf24">⚠</span><span>CSS 动画（pulse/spin）迁移到 Tailwind animate-pulse / animate-spin</span></div>
+    <div style="display:flex;gap:8px"><span style="color:#fbbf24">⚠</span><span>onFocus/onBlur 内联样式切换 → focus-visible: Tailwind ring utilities</span></div>
+  </div>
+</div>

@@ -1,0 +1,45 @@
+<h2>选择 UI 组件库方案</h2>
+<p class="subtitle">配合 Tailwind CSS 使用，替换现有内联 style 方案</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>shadcn/ui + Tailwind</h3>
+      <p>复制源码到项目，完全可定制，无 npm 版本锁定。组件质量高（Radix UI 底层），暗色主题开箱即用。目前最流行的方案。</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>优势</h4><ul><li>源码完全在项目里，可随意改</li><li>Radix 底层保障无障碍/键盘导航</li><li>暗色主题 + CSS 变量，与现有 token 体系兼容</li><li>社区生态最活跃</li></ul></div>
+        <div class="cons"><h4>劣势</h4><ul><li>首次安装需手动 add 各组件</li><li>学习曲线（需理解 cn() 工具函数）</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Headless UI + Tailwind</h3>
+      <p>Tailwind 官方出品的无样式组件库。只提供交互行为（dropdown/dialog/listbox），样式完全由你用 Tailwind 编写。</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>优势</h4><ul><li>官方出品，与 Tailwind 最匹配</li><li>行为层与样式层完全解耦</li><li>包体积很小</li></ul></div>
+        <div class="cons"><h4>劣势</h4><ul><li>只有少量组件（~10 个）</li><li>需要自己写所有样式，工作量较大</li><li>复杂组件（Table/DatePicker）需自己做</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Radix UI Primitives + Tailwind</h3>
+      <p>直接使用 Radix Primitives（shadcn 底层），搭配 Tailwind 自定义样式。比 shadcn 更底层、更灵活，但更多手工配置。</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>优势</h4><ul><li>无障碍和键盘支持最完善</li><li>组件数量多（覆盖所有交互需求）</li><li>无预置样式，零约束</li></ul></div>
+        <div class="cons"><h4>劣势</h4><ul><li>需要为每个组件手写全套 Tailwind 样式</li><li>相比 shadcn 工作量更大</li><li>社区模板资源不如 shadcn 丰富</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding:12px 16px;background:rgba(91,110,245,0.08);border-radius:8px;border:1px solid rgba(91,110,245,0.2)">
+  <span class="label">推荐</span>
+  <p style="margin-top:6px;font-size:13px">推荐 <strong>方案 A（shadcn/ui）</strong>——既保留了 Radix 的无障碍底层，又提供了开箱即用的暗色主题和 CSS 变量系统，与现有的 <code>--accent</code>/<code>--bg-card</code> token 体系无缝对接，迁移成本最低。</p>
+</div>
