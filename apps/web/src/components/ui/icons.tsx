@@ -256,6 +256,58 @@ function X(props: IconProps) {
   )
 }
 
+/** Key — API key/security settings */
+function KeyRound(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="7.5" cy="15.5" r="5.5" />
+      <path d="M21 2l-9.6 9.6" />
+      <path d="M15.5 7.5l3 3" />
+    </Icon>
+  )
+}
+
+/** User/person — profile settings */
+function User(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </Icon>
+  )
+}
+
+/** Bell — notifications */
+function Bell(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </Icon>
+  )
+}
+
+/** 4-square grid — dashboard/settings */
+function LayoutGrid(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </Icon>
+  )
+}
+
+/** Chat bubble — messaging/feedback */
+function MessageSquare(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </Icon>
+  )
+}
+
 export const Icons = {
   Hammer,
   Clipboard,
@@ -277,4 +329,9 @@ export const Icons = {
   ExternalLink,
   ChevronDown,
   X,
+  KeyRound,
+  User,
+  Bell,
+  LayoutGrid,
+  MessageSquare,
 }
