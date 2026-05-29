@@ -48,6 +48,11 @@ func UserIDFromContext(ctx context.Context) string {
 	return v
 }
 
+// WithUserID injects a userID into the context (used in tests).
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
+
 // GenerateJWT creates a signed JWT for the given userID.
 func GenerateJWT(userID, secret string) (string, error) {
 	claims := jwt.MapClaims{
