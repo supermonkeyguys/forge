@@ -19,6 +19,7 @@ type RouterDeps struct {
 	Task          *handler.TaskHandler
 	Health        *handler.HealthHandler
 	Internal      *handler.InternalHandler
+	Settings      *handler.SettingsHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -79,6 +80,13 @@ func NewRouter(deps RouterDeps) http.Handler {
 					r.Get("/{taskID}", deps.Task.Get)
 				})
 			})
+		})
+
+		// Settings
+		r.Route("/settings", func(r chi.Router) {
+			r.Get("/", deps.Settings.Get)
+			r.Put("/", deps.Settings.Save)
+			r.Delete("/api-key", deps.Settings.DeleteAPIKey)
 		})
 
 		// SSE stream (task-level, not nested under project for simplicity)

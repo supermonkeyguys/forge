@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -40,6 +41,7 @@ func main() {
 	projectRepo := postgres.NewProjectRepo(pool)
 	userRepo := postgres.NewUserRepo(pool)
 	taskRepo := postgres.NewTaskRepo(pool)
+	settingsRepo := postgres.NewSettingsRepo(pool)
 
 	// 3. Build handlers (receive domain interfaces)
 	hasher := handler.BcryptHasher{}
@@ -48,6 +50,7 @@ func main() {
 	taskHandler := handler.NewTaskHandler(taskRepo, projectRepo, cfg.AgentServiceURL)
 	healthHandler := handler.NewHealthHandler(pool)
 	internalHandler := handler.NewInternalHandler(taskRepo)
+	settingsHandler := handler.NewSettingsHandler(settingsRepo, cfg.SettingsEncryptionKey)
 
 	// 4. Assemble router
 	router := apiPkg.NewRouter(apiPkg.RouterDeps{
@@ -56,6 +59,7 @@ func main() {
 		Task:          taskHandler,
 		Health:        healthHandler,
 		Internal:      internalHandler,
+		Settings:      settingsHandler,
 		InternalToken: cfg.InternalToken,
 		JWTSecret:     cfg.JWTSecret,
 		Logger:        logger,
@@ -96,11 +100,12 @@ func main() {
 }
 
 type config struct {
-	Port            string
-	DatabaseURL     string
-	AgentServiceURL string
-	JWTSecret       string
-	InternalToken   string
+	Port                  string
+	DatabaseURL           string
+	AgentServiceURL       string
+	JWTSecret             string
+	InternalToken         string
+	SettingsEncryptionKey []byte
 }
 
 func loadConfig() (config, error) {
@@ -120,11 +125,20 @@ func loadConfig() (config, error) {
 	if jwtSecret == "" {
 		return config{}, errors.New("JWT_SECRET environment variable is required")
 	}
+	encKeyB64 := os.Getenv("SETTINGS_ENCRYPTION_KEY")
+	if encKeyB64 == "" {
+		return config{}, errors.New("SETTINGS_ENCRYPTION_KEY environment variable is required")
+	}
+	encKey, err := base64.StdEncoding.DecodeString(encKeyB64)
+	if err != nil || len(encKey) != 32 {
+		return config{}, errors.New("SETTINGS_ENCRYPTION_KEY must be a base64-encoded 32-byte key")
+	}
 	return config{
-		Port:            port,
-		DatabaseURL:     dbURL,
-		AgentServiceURL: agentURL,
-		JWTSecret:       jwtSecret,
-		InternalToken:   os.Getenv("INTERNAL_TOKEN"),
+		Port:                  port,
+		DatabaseURL:           dbURL,
+		AgentServiceURL:       agentURL,
+		JWTSecret:             jwtSecret,
+		InternalToken:         os.Getenv("INTERNAL_TOKEN"),
+		SettingsEncryptionKey: encKey,
 	}, nil
 }
