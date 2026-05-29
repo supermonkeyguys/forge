@@ -1,21 +1,23 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useProjects, useDeleteProject } from '@forge/core'
+import { toast } from '../store/toast-store'
 import { ProjectCard } from '../components/project-card/project-card'
 import { PageShell, EmptyState, LoadingState, ErrorState } from '../components/project-card/project-page-states'
 import { Button } from '../components/ui/button'
+import { Icons } from '../components/ui/icons'
 
 export function ProjectsPage() {
   const navigate = useNavigate()
   const { data, isLoading, isError } = useProjects()
   const { mutate: deleteProject } = useDeleteProject()
   const projects = data?.data ?? []
-  const [deleteError, setDeleteError] = useState<string | null>(null)
+
 
   const handleDelete = (id: string) => {
     if (!window.confirm('确定删除这个项目？此操作不可撤销。')) return
     deleteProject(id, {
-      onError: () => setDeleteError('删除失败，请稍后重试'),
+      onSuccess: () => toast.success('项目已删除'),
+      onError: () => toast.error('删除失败，请稍后重试'),
     })
   }
 
@@ -42,16 +44,19 @@ export function ProjectsPage() {
               </p>
             )}
           </div>
-          <Button onClick={() => navigate('/projects/new')}>
-            + 新建项目
-          </Button>
-        </div>
-
-        {deleteError && (
-          <div className="animate-fade-in mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5">
-            <p className="text-sm text-destructive">{deleteError}</p>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/settings"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground"
+              title="设置"
+            >
+              <Icons.Cog className="h-5 w-5" />
+            </Link>
+            <Button onClick={() => navigate('/projects/new')}>
+              + 新建项目
+            </Button>
           </div>
-        )}
+        </div>
 
         {projects.length === 0 ? (
           <EmptyState onNew={() => navigate('/projects/new')} />
