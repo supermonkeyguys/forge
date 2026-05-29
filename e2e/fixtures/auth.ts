@@ -11,7 +11,7 @@ export type AuthFixtures = {
 
 async function performDevLogin(page: Page) {
   await page.goto('/login')
-  await page.getByRole('button', { name: '→ 快速登录（开发模式）' }).click()
+  await page.getByRole('button', { name: '快速登录（开发模式）' }).click()
   // Wait until redirected to /projects
   await page.waitForURL('**/projects', { timeout: 10_000 })
 }
