@@ -77,7 +77,7 @@ export function AgentFlowPanel() {
   return (
     <div className="relative z-10 flex h-full flex-col overflow-hidden" data-panel="agent-flow">
       {/* Orchestrator status bar */}
-      <OrchestratorBar state={orchState} phase={phase} />
+      <OrchestratorBar state={orchState} phase={phase} onMock={import.meta.env.DEV ? injectMockEvents : undefined} />
 
       {/* Agent cards grid */}
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
@@ -130,7 +130,7 @@ export function AgentFlowPanel() {
   )
 }
 
-function OrchestratorBar({ state, phase }: { state: string | null; phase: string }) {
+function OrchestratorBar({ state, phase, onMock }: { state: string | null; phase: string; onMock?: () => void }) {
   const stateConfig: Record<string, { label: string; color: string; dotClass: string }> = {
     analyzing:  { label: '分析需求', color: 'text-primary', dotClass: 'bg-primary animate-pulse' },
     planning:   { label: '规划架构', color: 'text-primary', dotClass: 'bg-primary animate-pulse' },
@@ -152,13 +152,21 @@ function OrchestratorBar({ state, phase }: { state: string | null; phase: string
           <span className={cn('text-xs font-medium', config.color)}>{config.label}</span>
         </div>
       )}
-      {phase === 'running' && (
-        <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-3">
+        {phase === 'running' && (
           <div className="h-1 w-24 overflow-hidden rounded-full bg-secondary">
             <div className="h-full w-1/3 animate-shimmer rounded-full bg-primary/60" />
           </div>
-        </div>
-      )}
+        )}
+        {onMock && (
+          <button
+            onClick={onMock}
+            className="rounded-md border border-dashed border-border/50 px-2.5 py-1 text-[10px] text-muted-foreground/50 transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            ⚡ Mock
+          </button>
+        )}
+      </div>
     </div>
   )
 }
