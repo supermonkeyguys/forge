@@ -17,7 +17,7 @@
  */
 
 import { generateObject } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+import { anthropic, MODEL } from '../lib/ai-client.js'
 import { z } from 'zod'
 import type { Spec } from '../contracts/spec.js'
 import {
@@ -125,7 +125,7 @@ export class ArchitectAgent implements Agent {
     const emit = ctx?.emit ?? (() => {})
 
     const { object } = await generateObject({
-      model: anthropic('claude-sonnet-4-6'),
+      model: anthropic(MODEL),
       schema: LLMTaskPlanSchema,
       system: SYSTEM_PROMPT,
       prompt: buildPlanPrompt(spec),

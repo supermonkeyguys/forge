@@ -4,7 +4,7 @@
   "description": "Forge AI agent orchestration service",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node --env-file=.env ./node_modules/.bin/tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.0",
-    "ai": "^4.0.0",
+    "@ai-sdk/openai": "^3.0.67",
+    "ai": "^6.0.193",
     "bullmq": "^5.0.0",
     "e2b": "^1.0.0",
     "zod": "^3.22.0"

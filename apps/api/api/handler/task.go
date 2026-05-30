@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -204,7 +205,9 @@ func (h *TaskHandler) dispatchToAgent(task domain.Task) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := agentHTTPClient.Do(req)
 	if err != nil || resp == nil {
+		log.Printf("[dispatchToAgent] failed url=%s err=%v", h.agentURL+"/run", err)
 		return
 	}
+	log.Printf("[dispatchToAgent] ok status=%d", resp.StatusCode)
 	resp.Body.Close()
 }

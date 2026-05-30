@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useCreateProject, useAuthStore, selectToken, api } from '@forge/core'
 import { useWorkspaceStore, selectUserInput } from '../../store/workspace-store'
+import { toast } from '../../store/toast-store'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
 
@@ -13,11 +16,13 @@ const PLACEHOLDER_EXAMPLES = [
 export function RequirementInput() {
   const userInput = useWorkspaceStore(selectUserInput)
   const setUserInput = useWorkspaceStore((s) => s.setUserInput)
-  const setPhase = useWorkspaceStore((s) => s.setPhase)
-  const setDraftSpec = useWorkspaceStore((s) => s.setDraftSpec)
+  const startGeneration = useWorkspaceStore((s) => s.startGeneration)
+  const token = useAuthStore(selectToken)
+  const { mutate: createProject, isPending: isCreating } = useCreateProject()
+  const navigate = useNavigate()
 
   const [placeholder, setPlaceholder] = useState(PLACEHOLDER_EXAMPLES[0]!)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -36,62 +41,37 @@ export function RequirementInput() {
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }, [userInput])
 
-  const handleSubmit = async () => {
+  const isLoading = isCreating || isStarting
+
+  const handleSubmit = () => {
     if (!userInput.trim() || isLoading) return
-    setIsLoading(true)
+    setIsStarting(true)
 
-    try {
-      await new Promise((r) => setTimeout(r, 800))
+    const name = userInput.length > 40 ? userInput.slice(0, 40) + '...' : userInput
 
-      const mockDraft = {
-        title: userInput.length > 20 ? userInput.slice(0, 20) + '...' : userInput,
-        description: userInput,
-        business_domain: 'custom-app',
-        constraints: { auth: true, database: true, file_upload: false, email: false, payments: false },
-        clarifying_questions: [],
-        features: [
-          {
-            id: 'F001',
-            name: '用户认证',
-            confidence: 'high' as const,
-            acceptance_criteria: ['支持邮箱+密码登录', '错误提示清晰', '登录成功跳转首页'],
-            out_of_scope: [],
-            selected: true,
-          },
-          {
-            id: 'F002',
-            name: '核心功能',
-            confidence: 'high' as const,
-            acceptance_criteria: ['用户可以创建记录', '支持编辑和删除', '列表分页展示'],
-            out_of_scope: [],
-            selected: true,
-          },
-          {
-            id: 'F003',
-            name: '数据导出',
-            confidence: 'medium' as const,
-            acceptance_criteria: ['支持导出为 CSV', '导出范围可筛选'],
-            out_of_scope: [],
-            selected: true,
-          },
-          {
-            id: 'F004',
-            name: '高级分析报表',
-            confidence: 'low' as const,
-            acceptance_criteria: ['图表展示趋势数据'],
-            out_of_scope: [],
-            selected: false,
-          },
-        ],
-      }
-
-      setDraftSpec(mockDraft)
-      setPhase('pm-review')
-    } catch {
-      // TODO: error state
-    } finally {
-      setIsLoading(false)
-    }
+    createProject(name, {
+      onSuccess: async (result) => {
+        const projectId = result?.data?.id
+        if (!projectId) {
+          setIsStarting(false)
+          toast.error('创建项目失败，请重试')
+          return
+        }
+        try {
+          await api.post(`/api/v1/projects/${projectId}/tasks`, { prompt: userInput }, token ?? undefined)
+        } catch {
+          setIsStarting(false)
+          toast.error('启动 Agent 失败，请重试')
+          return
+        }
+        startGeneration(projectId)
+        navigate(`/projects/${projectId}`)
+      },
+      onError: () => {
+        setIsStarting(false)
+        toast.error('创建项目失败，请检查网络后重试')
+      },
+    })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -129,7 +109,7 @@ export function RequirementInput() {
           {isLoading ? (
             <span className="flex items-center gap-2">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-              分析需求中...
+              启动中...
             </span>
           ) : (
             <span>生成应用 <kbd className="ml-1.5 rounded bg-primary-foreground/10 px-1.5 py-0.5 text-[10px] font-mono">⌘↵</kbd></span>

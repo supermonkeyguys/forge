@@ -13,7 +13,7 @@
  */
 
 import { generateObject } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+import { anthropic, MODEL } from '../lib/ai-client.js'
 import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -125,7 +125,7 @@ export class PMAgent implements Agent {
     emit({ type: 'agent_thinking', agent: 'pm', content: 'Identifying business domain and implicit requirements...' })
 
     const { object } = await generateObject({
-      model: anthropic('claude-sonnet-4-6'),
+      model: anthropic(MODEL),
       schema: LLMDraftSchema,
       system: SYSTEM_PROMPT,
       prompt: buildDraftPrompt(userInput),

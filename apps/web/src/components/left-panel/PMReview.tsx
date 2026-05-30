@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useCreateProject } from '@forge/core'
 import { toast } from '../../store/toast-store'
 import {
   useWorkspaceStore,
   selectDraftSpec,
+  selectAgentJobId,
   type DraftFeature,
 } from '../../store/workspace-store'
 import { Button } from '../ui/button'
@@ -30,11 +29,7 @@ export function PMReview() {
   const draft = useWorkspaceStore(selectDraftSpec)
   const setDraftSpec = useWorkspaceStore((s) => s.setDraftSpec)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
-  const startGeneration = useWorkspaceStore((s) => s.startGeneration)
-  const userInput = useWorkspaceStore((s) => s.userInput)
-
-  const { mutate: createProject, isPending: isCreating } = useCreateProject()
-  const navigate = useNavigate()
+  const agentJobId = useWorkspaceStore(selectAgentJobId)
 
   const [supplement, setSupplement] = useState('')
   const [isStarting, setIsStarting] = useState(false)
@@ -52,27 +47,33 @@ export function PMReview() {
     })
   }
 
-  const handleConfirm = () => {
-    if (selectedCount === 0 || isStarting || isCreating) return
+  const handleConfirm = async () => {
+    if (selectedCount === 0 || isStarting || !agentJobId) return
     setIsStarting(true)
 
-    createProject(draft.title || userInput.slice(0, 40), {
-      onSuccess: (result) => {
-        const projectId = result?.data?.id
-        if (!projectId) {
-          setIsStarting(false)
-          toast.error('创建项目失败，请重试')
-          return
+    const confirmedDraft = supplement.trim()
+      ? {
+          ...draft,
+          clarifying_questions: [
+            ...(draft.clarifying_questions ?? []),
+            supplement.trim(),
+          ],
         }
-        toast.success('项目已创建，Agent 团队正在启动...')
-        startGeneration(projectId)
-        navigate(`/projects/${projectId}`)
-      },
-      onError: () => {
-        setIsStarting(false)
-        toast.error('创建项目失败，请检查网络后重试')
-      },
-    })
+      : draft
+
+    try {
+      const res = await fetch(`/agent/confirm-draft/${agentJobId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft: confirmedDraft }),
+      })
+      if (!res.ok) throw new Error('confirm failed')
+      setDraftSpec(null)
+      setPhase('running')
+    } catch {
+      setIsStarting(false)
+      toast.error('确认失败，请重试')
+    }
   }
 
   const byConfidence = (tier: DraftFeature['confidence']) =>
@@ -82,16 +83,14 @@ export function PMReview() {
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b border-border/40 px-6 pb-4 pt-5">
-        <button
-          onClick={() => setPhase('input')}
-          className="mb-2 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
-        >
-          <span className="text-[10px]">←</span> 返回编辑
-        </button>
+        <div className="mb-2 flex items-center gap-1.5 text-[10px] text-yellow-400/80">
+          <Icons.AlertTriangle className="h-3 w-3" />
+          PM Agent 正在等待你确认
+        </div>
         <h3 className="text-[15px] font-semibold tracking-tight">
           我理解你想做「<span className="text-gradient">{draft.title}</span>」
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">以下功能由 AI 推导，确认后开始锻造</p>
+        <p className="mt-1 text-xs text-muted-foreground">以下功能由 AI 推导，确认后继续锻造</p>
       </div>
 
       {/* Feature list */}
@@ -126,11 +125,13 @@ export function PMReview() {
           })}
 
           {/* Clarifying questions */}
-          {draft.clarifying_questions.length > 0 && (
+          {(draft.clarifying_questions ?? []).length > 0 && (
             <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-yellow-400"><Icons.AlertTriangle className="h-3 w-3" /> AI 有几个疑问</p>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-yellow-400">
+                <Icons.AlertTriangle className="h-3 w-3" /> AI 有几个疑问
+              </p>
               {draft.clarifying_questions.map((q, i) => (
-                <p key={i} className="mb-0.5 text-xs text-muted-foreground">• {q}</p>
+                <p key={i} className="mb-0.5 text-xs text-muted-foreground">• {typeof q === 'string' ? q : (q as any).question}</p>
               ))}
             </div>
           )}
@@ -153,12 +154,12 @@ export function PMReview() {
       <div className="border-t border-border/40 px-6 py-4">
         <Button
           onClick={handleConfirm}
-          disabled={selectedCount === 0 || isStarting || isCreating}
+          disabled={selectedCount === 0 || isStarting || !agentJobId}
           className="w-full"
         >
-          {isStarting || isCreating
-            ? '启动中...'
-            : `确认并开始锻造 (${selectedCount} 个功能)`
+          {isStarting
+            ? '确认中...'
+            : `确认并继续 (${selectedCount} 个功能)`
           }
         </Button>
       </div>
