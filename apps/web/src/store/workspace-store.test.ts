@@ -64,12 +64,51 @@ describe('workspace-store', () => {
       expect(card.filesWritten).toContain('prisma/schema.prisma')
     })
 
-    it('accumulates multiple files', () => {
+    it('accumulates multiple different files', () => {
       useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'logic', message: 'start' })
       useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'logic', file: 'a.ts', action: 'create' })
       useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'logic', file: 'b.ts', action: 'create' })
       const card = useWorkspaceStore.getState().agentCards['logic']!
       expect(card.filesWritten).toHaveLength(2)
+      expect(card.filesWritten).toEqual(['a.ts', 'b.ts'])
+    })
+
+    it('deduplicates when same file is written twice (create then patch)', () => {
+      useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'api', message: 'start' })
+      useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'api', file: 'src/routes.ts', action: 'create' })
+      useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'api', file: 'src/routes.ts', action: 'patch' })
+      const card = useWorkspaceStore.getState().agentCards['api']!
+      // Should appear only once — prevents React duplicate key warning
+      expect(card.filesWritten).toHaveLength(1)
+      expect(card.filesWritten).toEqual(['src/routes.ts'])
+    })
+
+    it('deduplicates when same file appears many times', () => {
+      useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'ui', message: 'start' })
+      for (let i = 0; i < 5; i++) {
+        useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'ui', file: 'src/Button.tsx', action: 'patch' })
+      }
+      const card = useWorkspaceStore.getState().agentCards['ui']!
+      expect(card.filesWritten).toHaveLength(1)
+    })
+
+    it('does not deduplicate across different agents', () => {
+      useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'logic', message: 'start' })
+      useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'api', message: 'start' })
+      // Both agents write the same file path (possible in real scenarios)
+      useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'logic', file: 'src/types.ts', action: 'create' })
+      useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'api', file: 'src/types.ts', action: 'create' })
+      const logicCard = useWorkspaceStore.getState().agentCards['logic']!
+      const apiCard = useWorkspaceStore.getState().agentCards['api']!
+      expect(logicCard.filesWritten).toHaveLength(1)
+      expect(apiCard.filesWritten).toHaveLength(1)
+    })
+
+    it('ignores empty file path', () => {
+      useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'schema', message: 'start' })
+      useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'schema', file: '', action: 'create' })
+      const card = useWorkspaceStore.getState().agentCards['schema']!
+      expect(card.filesWritten).toHaveLength(0)
     })
   })
 

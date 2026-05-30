@@ -309,6 +309,38 @@ components/    ← 纯 UI，不 import @forge/core
 - [ ] 无 emoji，图标全部用 `Icons.*`
 - [ ] 背景色、文字色用白色透明度阶梯，不用灰色系
 
+## React key 规范
+
+**规则：key 必须在当前列表中唯一且稳定，禁止使用可能重复的业务值。**
+
+```tsx
+// ✅ 稳定 id（最优）
+items.map(item => <Card key={item.id} />)
+
+// ✅ index + 值 组合（当值可能重复时）
+files.map((f, i) => <p key={`${i}-${f}`} />)
+
+// ❌ 纯文件路径 — 同一文件被写多次时重复
+files.map(f => <p key={f} />)
+
+// ❌ 纯 index — 列表重排时导致 diff 错误
+items.map((item, i) => <Card key={i} />)
+```
+
+**Store 层去重原则**：凡是用文件路径、URL、名称等业务字段做 React key 的数据，在 store 写入时必须去重：
+
+```ts
+// ✅ 正确：写入前检查是否已存在
+const filesWritten = file && !card.filesWritten.includes(file)
+  ? [...card.filesWritten, file]
+  : card.filesWritten
+
+// ❌ 错误：盲目 push，同一文件写两次会出现重复 key
+filesWritten: [...card.filesWritten, file]
+```
+
+**测试要求**：凡是 store 中维护数组且用于 React list 渲染的，必须有"重复写入不产生重复元素"的测试用例。
+
 ## 新增组件 Checklist
 
 - [ ] 浮层/面板：用毛玻璃三层级之一，`backdropFilter` 写 inline style

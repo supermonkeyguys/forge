@@ -267,8 +267,8 @@ function AgentCard({
       {/* Files written */}
       {card.filesWritten.length > 0 && (
         <div className="mt-2.5 flex flex-col gap-0.5">
-          {card.filesWritten.slice(-3).map((f) => (
-            <p key={f} className="truncate font-mono text-[10px] text-muted-foreground/50">
+          {card.filesWritten.slice(-3).map((f, i) => (
+            <p key={`${i}-${f}`} className="truncate font-mono text-[10px] text-muted-foreground/50">
               <span className="text-green-400/70">+</span> {f.split('/').pop()}
             </p>
           ))}

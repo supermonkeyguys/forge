@@ -160,13 +160,15 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
         case 'agent_thinking':
           cards[role] = { ...card, status: 'running', currentAction: event.content ?? '' }
           break
-        case 'agent_file_write':
-          cards[role] = {
-            ...card,
-            currentAction: `writing ${event.file}`,
-            filesWritten: [...card.filesWritten, event.file ?? ''].filter(Boolean),
-          }
+        case 'agent_file_write': {
+          const file = event.file ?? ''
+          // Deduplicate: same file may be written multiple times (create then patch)
+          const filesWritten = file && !card.filesWritten.includes(file)
+            ? [...card.filesWritten, file]
+            : card.filesWritten
+          cards[role] = { ...card, currentAction: `writing ${file}`, filesWritten }
           break
+        }
         case 'agent_done':
           cards[role] = { ...card, status: 'done', currentAction: event.summary ?? 'Done', finishedAt: Date.now() }
           break
