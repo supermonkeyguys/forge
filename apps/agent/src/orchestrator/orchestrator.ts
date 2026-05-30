@@ -34,7 +34,7 @@ import { parallelBatches } from '../contracts/task-plan.js'
 import type { Spec } from '../contracts/spec.js'
 import type { TaskPlan, PlanTask, AgentRole } from '../contracts/task-plan.js'
 import type { ValidationReport } from '../contracts/validation-report.js'
-import type { ProgressEvent } from '../agents/types.js'
+import type { ProgressEvent, BuilderAgent } from '../agents/types.js'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ export class Orchestrator {
   private readonly pm = new PMAgent()
   private readonly architect = new ArchitectAgent()
   private readonly test = new TestAgent()
-  private readonly builders: Record<AgentRole, { executeTask: Function }> = {
+  private readonly builders: Partial<Record<AgentRole, BuilderAgent>> = {
     schema: new SchemaAgent(),
     logic:  new LogicAgent(),
     api:    new ApiAgent(),
@@ -421,7 +421,7 @@ export class Orchestrator {
 
     const spawnFn: SpawnTaskFn = (params) => this.spawnTask(params)
 
-    return (agent as any).executeTask(
+    return agent.executeTask(
       { task: taskWithContext, projectContext: context, existingFileContent: existingContent },
       this.deps.onEvent,
       this.deps.sandbox,

@@ -21,17 +21,13 @@
  */
 
 import { generateText, tool } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+import { anthropic, MODEL } from '../../lib/ai-client.js'
 import { z } from 'zod'
-import type { AgentRunContext, AgentResult, ProgressEvent } from '../types.js'
+import type { AgentRunContext, AgentResult, BuilderAgent, BuilderTaskInput, ProgressEvent } from '../types.js'
 import type { PlanTask, AgentRole } from '../../contracts/task-plan.js'
-import type { SpawnTaskFn } from '../../orchestrator/orchestrator.js'
+import type { SpawnTaskFn, SandboxInterface } from '../../orchestrator/orchestrator.js'
 
-export interface TaskInput {
-  task: PlanTask
-  projectContext: string
-  existingFileContent?: string
-}
+export type { BuilderTaskInput as TaskInput }
 
 // ── Sandbox interface (injected via ctx) ──────────────────────────
 
@@ -160,7 +156,7 @@ function buildTools(
 
 // ── Base class ────────────────────────────────────────────────────
 
-export abstract class BaseBuilderAgent {
+export abstract class BaseBuilderAgent implements BuilderAgent {
   abstract readonly role: AgentRole
 
   protected abstract systemPrompt(): string
@@ -216,9 +212,9 @@ export abstract class BaseBuilderAgent {
    * Exposed for direct use by Orchestrator (bypasses run() task-loading).
    */
   async executeTask(
-    input: TaskInput,
+    input: BuilderTaskInput,
     emit: (e: ProgressEvent) => void,
-    sandbox?: SandboxIO,
+    sandbox?: SandboxInterface,
     spawnFn?: SpawnTaskFn,
   ): Promise<string> {
     emit({
@@ -241,7 +237,7 @@ export abstract class BaseBuilderAgent {
     )
 
     const { text, steps } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+      model: anthropic(MODEL),
       system: this.systemPrompt(),
       prompt: this.buildTaskPrompt(input),
       tools,
@@ -261,7 +257,7 @@ export abstract class BaseBuilderAgent {
 
   private async generateFallback(input: TaskInput, emit: (e: ProgressEvent) => void): Promise<string> {
     const { text } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+      model: anthropic(MODEL),
       system: this.systemPrompt(),
       prompt: this.buildTaskPrompt(input),
     })

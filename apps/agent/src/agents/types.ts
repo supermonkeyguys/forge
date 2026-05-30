@@ -4,6 +4,8 @@
  */
 
 import type { OrchestratorContext, ValidationError } from "../orchestrator/state-machine.js";
+import type { SandboxInterface, SpawnTaskFn } from "../orchestrator/orchestrator.js";
+import type { PlanTask } from "../contracts/task-plan.js";
 
 export interface AgentRunContext {
   orchestrator: OrchestratorContext;
@@ -43,4 +45,20 @@ export interface AgentResult {
 export interface Agent {
   role: AgentRole;
   run(ctx: AgentRunContext): Promise<AgentResult>;
+}
+
+export interface BuilderTaskInput {
+  task: PlanTask;
+  projectContext: string;
+  existingFileContent?: string;
+}
+
+// Builder agents additionally expose executeTask() for orchestrator-driven execution
+export interface BuilderAgent extends Agent {
+  executeTask(
+    input: BuilderTaskInput,
+    emit: (e: ProgressEvent) => void,
+    sandbox?: SandboxInterface,
+    spawnFn?: SpawnTaskFn,
+  ): Promise<string>;
 }
