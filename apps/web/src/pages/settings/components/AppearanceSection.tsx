@@ -1,13 +1,13 @@
 import { useSettingsStore, THEME_PRESETS } from '../../../store/settings-store'
 import { cn } from '../../../lib/utils'
-import { GlassCard } from './GlassCard'
+import { GlassCard } from '../../../components/ui/glass-card'
+import { SettingSection } from './SettingSection'
 
 export function AppearanceSection() {
   const { themeColor, setThemeColor } = useSettingsStore()
 
   return (
-    <div className="max-w-[640px]">
-      <h1 className="mb-5 text-[17px] font-semibold text-white/88">外观</h1>
+    <SettingSection title="外观">
       <GlassCard>
         <p className="mb-3 text-[11.5px] font-medium text-white/40">主题色</p>
         <div className="flex gap-5">
@@ -35,6 +35,6 @@ export function AppearanceSection() {
           <code className="text-white/40">--primary</code> 应用到全站，刷新保留。
         </p>
       </GlassCard>
-    </div>
+    </SettingSection>
   )
 }

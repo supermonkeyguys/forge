@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { useGetSettings, useSaveSettings, useResetApiKey } from '@forge/core'
 import { Icons } from '../../../components/ui/icons'
 import { toast } from '../../../store/toast-store'
-import { GlassCard } from './GlassCard'
+import { GlassCard } from '../../../components/ui/glass-card'
+import { DarkInput } from '../../../components/ui/dark-input'
+import { SettingSection } from './SettingSection'
 
 export function APIConfigSection() {
   const { data, isLoading } = useGetSettings()
@@ -41,29 +43,28 @@ export function APIConfigSection() {
   }
 
   return (
-    <div className="max-w-[640px]">
-      <h1 className="mb-5 text-[17px] font-semibold text-white/88">API 配置</h1>
+    <SettingSection title="API 配置">
       <GlassCard>
         <div className="mb-4">
           <label className="mb-1.5 block text-[11.5px] font-medium text-white/40">Base URL</label>
-          <input
+          <DarkInput
             type="text"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder="https://api.openai.com/v1"
-            className="w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 font-mono text-[13px] text-white/65 outline-none focus:border-primary/50"
+            className="w-full"
           />
         </div>
 
         <div className="mb-1">
           <label className="mb-1.5 block text-[11.5px] font-medium text-white/40">API Key</label>
           <div className="flex items-center gap-2">
-            <input
+            <DarkInput
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={data?.hasApiKey ? '输入新 Key 以覆盖' : 'sk-...'}
-              className="flex-1 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 font-mono text-[13px] text-white/65 outline-none focus:border-primary/50"
+              className="flex-1"
             />
             {data?.hasApiKey && (
               <span className="flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-400 whitespace-nowrap">
@@ -96,6 +97,6 @@ export function APIConfigSection() {
           </button>
         </div>
       </GlassCard>
-    </div>
+    </SettingSection>
   )
 }
