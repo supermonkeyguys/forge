@@ -22,31 +22,7 @@ import type { OrchestratorState, OrchestratorContext } from './orchestrator/stat
 import type { ProgressEvent } from './agents/types.js'
 import type { DraftSpec } from './agents/pm-agent.js'
 import { notifyGoAPI } from './lib/go-api-client.js'
-
-// ── Job store ─────────────────────────────────────────────────────
-
-type JobStatus = 'queued' | 'running' | OrchestratorState
-
-interface Job {
-  id: string
-  taskId: string | null   // Go API task ID — used for status callbacks
-  projectId: string
-  status: JobStatus
-  events: ProgressEvent[]
-  draft: DraftSpec | null        // set when PM Agent produces draft, cleared after confirm
-  previewUrl: string | null
-  reviewUrl: string | null
-  reviewHtml: string | null    // raw HTML cached from sandbox write, served via GET /review/:jobId
-  error: string | null
-  waitingReason: string | null  // set when status === 'waiting'
-  createdAt: string
-  updatedAt: string
-  // Internal: resolve the onDraftReady promise when frontend confirms
-  _draftResolve: ((draft: DraftSpec) => void) | null
-  _orchestrator: Orchestrator | null
-}
-
-const jobs = new Map<string, Job>()
+import { jobStore, type Job } from './job-store.js'
 
 // ── Request helpers ───────────────────────────────────────────────
 
@@ -112,16 +88,16 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
     waitingReason: null,
     createdAt: now,
     updatedAt: now,
-    _draftResolve: null,
-    _orchestrator: null,
   }
-  jobs.set(jobId, job)
+  jobStore.add(job)
 
   // Start async — do not await
   runJob(job, userInput).catch((err) => {
-    job.status = 'aborted'
-    job.error = err instanceof Error ? err.message : String(err)
-    job.updatedAt = new Date().toISOString()
+    jobStore.patch(jobId, {
+      status: 'aborted',
+      error: err instanceof Error ? err.message : String(err),
+      updatedAt: new Date().toISOString(),
+    })
   })
 
   send(res, 202, { data: { jobId, status: 'queued' } })
@@ -130,10 +106,10 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
 // ── Route: GET /status/:jobId ─────────────────────────────────────
 
 function handleStatus(res: ServerResponse, jobId: string): void {
-  const job = jobs.get(jobId)
+  const job = jobStore.get(jobId)
   if (!job) return sendError(res, 404, `job ${jobId} not found`)
 
-  const { _draftResolve: _r, _orchestrator: _o, reviewHtml: _h, ...safe } = job
+  const { reviewHtml: _h, ...safe } = job
   send(res, 200, { data: safe })
 }
 
@@ -144,7 +120,7 @@ async function handleResume(
   res: ServerResponse,
   jobId: string,
 ): Promise<void> {
-  const job = jobs.get(jobId)
+  const job = jobStore.get(jobId)
   if (!job) return sendError(res, 404, `job ${jobId} not found`)
 
   let body: unknown
@@ -158,28 +134,28 @@ async function handleResume(
   }
 
   // Case 1: job is waiting for user to confirm the PM draft
-  if (job.status === 'running' && job.draft && job._draftResolve) {
+  if (job.status === 'running' && job.draft && jobStore.hasPendingDraft(jobId)) {
     const confirmed: DraftSpec = {
       ...(job.draft),
-      // Pass any user amendments as extra clarifying questions
       clarifying_questions: [
         ...(job.draft.clarifying_questions ?? []),
         `User amendment: ${userInput}`,
       ],
     }
-    job._draftResolve(confirmed)
-    job._draftResolve = null
-    job.draft = null
-    job.updatedAt = new Date().toISOString()
+    jobStore.resolveDraft(jobId, confirmed)
+    jobStore.patch(jobId, { draft: null, updatedAt: new Date().toISOString() })
     return send(res, 200, { data: { jobId, status: 'resumed' } })
   }
 
   // Case 2: orchestrator is in WAITING state (retries exhausted)
-  if (job.status === 'waiting' && job._orchestrator) {
-    job._orchestrator.resume(userInput).catch((err) => {
-      job.status = 'aborted'
-      job.error = err instanceof Error ? err.message : String(err)
-      job.updatedAt = new Date().toISOString()
+  const orc = jobStore.getOrchestrator(jobId)
+  if (job.status === 'waiting' && orc) {
+    orc.resume(userInput).catch((err) => {
+      jobStore.patch(jobId, {
+        status: 'aborted',
+        error: err instanceof Error ? err.message : String(err),
+        updatedAt: new Date().toISOString(),
+      })
     })
     return send(res, 200, { data: { jobId, status: 'resumed' } })
   }
@@ -194,9 +170,9 @@ async function handleConfirmDraft(
   res: ServerResponse,
   jobId: string,
 ): Promise<void> {
-  const job = jobs.get(jobId)
+  const job = jobStore.get(jobId)
   if (!job) return sendError(res, 404, `job ${jobId} not found`)
-  if (!job.draft || !job._draftResolve) {
+  if (!job.draft || !jobStore.hasPendingDraft(jobId)) {
     return sendError(res, 409, `job ${jobId} has no pending draft`)
   }
 
@@ -207,10 +183,8 @@ async function handleConfirmDraft(
 
   // Accept the draft as-is or with modifications
   const draft = (body as Record<string, unknown>).draft as DraftSpec | undefined
-  job._draftResolve(draft ?? job.draft)
-  job._draftResolve = null
-  job.draft = null
-  job.updatedAt = new Date().toISOString()
+  jobStore.resolveDraft(jobId, draft ?? job.draft!)
+  jobStore.patch(jobId, { draft: null, updatedAt: new Date().toISOString() })
 
   send(res, 200, { data: { jobId, status: 'confirmed' } })
 }
@@ -218,8 +192,7 @@ async function handleConfirmDraft(
 // ── Job runner ────────────────────────────────────────────────────
 
 async function runJob(job: Job, userInput: string): Promise<void> {
-  job.status = 'running'
-  job.updatedAt = new Date().toISOString()
+  jobStore.patch(job.id, { status: 'running', updatedAt: new Date().toISOString() })
 
   // Create sandbox — use MockSandbox when E2B key is placeholder/mock
   const e2bKey = process.env['E2B_API_KEY'] ?? ''
@@ -238,7 +211,7 @@ async function runJob(job: Job, userInput: string): Promise<void> {
   const sandboxAdapter = {
     writeFile: async (path: string, content: string) => {
       if (path === '/home/user/review.html') {
-        job.reviewHtml = content    // cache for GET /review/:jobId
+        jobStore.patch(job.id, { reviewHtml: content })
       }
       return sandbox.writeFile(path, content)
     },
@@ -252,45 +225,48 @@ async function runJob(job: Job, userInput: string): Promise<void> {
     sandbox: sandboxAdapter,
 
     onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => {
-      job.status = state
-      if (ctx.reviewUrl) job.reviewUrl = ctx.reviewUrl    // sync reviewUrl from orchestrator context
-      if (state === 'waiting' && ctx.pendingUserInput) job.waitingReason = ctx.pendingUserInput
-      job.updatedAt = new Date().toISOString()
-      if (job.taskId) {
+      const current = jobStore.get(job.id)!
+      jobStore.patch(job.id, {
+        status: state,
+        ...(ctx.reviewUrl ? { reviewUrl: ctx.reviewUrl } : {}),
+        ...(state === 'waiting' && ctx.pendingUserInput ? { waitingReason: ctx.pendingUserInput } : {}),
+        updatedAt: new Date().toISOString(),
+      })
+      if (current.taskId) {
         const extras =
           state === 'done'
-            ? { previewUrl: job.previewUrl ?? undefined }
+            ? { previewUrl: current.previewUrl ?? undefined }
             : state === 'aborted'
-              ? { errorMsg: job.error ?? undefined }
+              ? { errorMsg: current.error ?? undefined }
               : undefined
-        notifyGoAPI(job.taskId, state, extras).catch((err: unknown) => {
+        notifyGoAPI(current.taskId, state, extras).catch((err: unknown) => {
           console.error('[onStateChange] notifyGoAPI failed:', err)
         })
       }
     },
 
     onDraftReady: (draft: DraftSpec): Promise<DraftSpec> => {
-      job.draft = draft
-      job.updatedAt = new Date().toISOString()
+      jobStore.patch(job.id, { draft, updatedAt: new Date().toISOString() })
       return new Promise<DraftSpec>((resolve) => {
-        job._draftResolve = resolve
+        jobStore.setDraftResolve(job.id, resolve)
       })
     },
 
     onEvent: (event: ProgressEvent) => {
-      job.events.push(event)
-      job.updatedAt = new Date().toISOString()
+      jobStore.pushEvent(job.id, event)
     },
   })
 
-  job._orchestrator = orc
+  jobStore.setOrchestrator(job.id, orc)
 
   const result = await orc.run()
 
-  job.previewUrl = result.previewUrl
-  job.status = result.state
-  job.updatedAt = new Date().toISOString()
-  job._orchestrator = null
+  jobStore.patch(job.id, {
+    previewUrl: result.previewUrl,
+    status: result.state,
+    updatedAt: new Date().toISOString(),
+  })
+  jobStore.setOrchestrator(job.id, null)
 
   // Keep sandbox alive for preview if done, kill otherwise (no-op for mock)
   if (!useMock) {
@@ -311,7 +287,7 @@ const server = createServer((req, res) => {
 
   // GET /health
   if (method === 'GET' && url === '/health') {
-    return send(res, 200, { status: 'ok', service: 'forge-agent', jobs: jobs.size })
+    return send(res, 200, { status: 'ok', service: 'forge-agent', jobs: jobStore.size() })
   }
 
   // POST /run
@@ -340,7 +316,7 @@ const server = createServer((req, res) => {
   // GET /review/:jobId — serve the A2UI review HTML
   const reviewMatch = url.match(/^\/review\/([^/]+)$/)
   if (method === 'GET' && reviewMatch) {
-    const job = jobs.get(reviewMatch[1]!)
+    const job = jobStore.get(reviewMatch[1]!)
     if (!job) return sendError(res, 404, `job ${reviewMatch[1]} not found`)
     if (!job.reviewHtml) return sendError(res, 404, 'review HTML not ready yet')
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
@@ -358,7 +334,7 @@ const server = createServer((req, res) => {
 
     // Find the most recent job for this project
     let latest: Job | null = null
-    for (const job of jobs.values()) {
+    for (const job of jobStore.values()) {
       if (job.projectId === pid) {
         if (!latest || job.createdAt > latest.createdAt) latest = job
       }
@@ -366,7 +342,7 @@ const server = createServer((req, res) => {
 
     if (!latest) return send(res, 200, { data: null })
 
-    const { _draftResolve: _r, _orchestrator: _o, reviewHtml: _h, ...safe } = latest
+    const { reviewHtml: _h, ...safe } = latest
     send(res, 200, {
       data: {
         ...safe,
