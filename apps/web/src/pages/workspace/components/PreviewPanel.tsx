@@ -4,9 +4,9 @@ import {
   selectPreviewUrl,
   selectPhase,
   selectOrchestratorState,
-} from '../../store/workspace-store'
-import { cn } from '../../lib/utils'
-import { Icons } from '../ui/icons'
+} from '../../../store/workspace-store'
+import { cn } from '../../../lib/utils'
+import { Icons } from '../../../components/ui/icons'
 
 export function PreviewPanel() {
   const previewUrl = useWorkspaceStore(selectPreviewUrl)

@@ -1,4 +1,4 @@
-import { useWorkspaceStore, selectPhase } from '../../store/workspace-store'
+import { useWorkspaceStore, selectPhase } from '../../../store/workspace-store'
 import { RequirementInput } from './RequirementInput'
 import { PMReview } from './PMReview'
 import { ConversationHistory } from './ConversationHistory'

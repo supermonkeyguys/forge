@@ -1,5 +1,5 @@
-import { Button } from '../ui/button'
-import { Icons } from '../ui/icons'
+import { Button } from '../../../components/ui/button'
+import { Icons } from '../../../components/ui/icons'
 
 export function PageShell({ children }: { children: React.ReactNode }) {
   return (

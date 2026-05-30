@@ -5,12 +5,12 @@ import {
   selectOrchestratorState,
   selectWaitingReason,
   selectEvents,
-} from '../../store/workspace-store'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { ScrollArea } from '../ui/scroll-area'
-import { cn } from '../../lib/utils'
-import { Icons } from '../ui/icons'
+} from '../../../store/workspace-store'
+import { Button } from '../../../components/ui/button'
+import { Input } from '../../../components/ui/input'
+import { ScrollArea } from '../../../components/ui/scroll-area'
+import { cn } from '../../../lib/utils'
+import { Icons } from '../../../components/ui/icons'
 
 export function ConversationHistory() {
   const phase = useWorkspaceStore(selectPhase)

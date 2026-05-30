@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateProject, useAuthStore, selectToken, api } from '@forge/core'
-import { useWorkspaceStore, selectUserInput } from '../../store/workspace-store'
-import { toast } from '../../store/toast-store'
-import { Button } from '../ui/button'
-import { Textarea } from '../ui/textarea'
+import { useWorkspaceStore, selectUserInput } from '../../../store/workspace-store'
+import { toast } from '../../../store/toast-store'
+import { Button } from '../../../components/ui/button'
+import { Textarea } from '../../../components/ui/textarea'
 
 const PLACEHOLDER_EXAMPLES = [
   '我需要一个报销申请系统',

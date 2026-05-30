@@ -6,11 +6,11 @@ import {
   selectPhase,
   selectEvents,
   type AgentCardState,
-} from '../../store/workspace-store'
+} from '../../../store/workspace-store'
 import type { AgentRole } from '@forge/core'
-import { ScrollArea } from '../ui/scroll-area'
-import { cn } from '../../lib/utils'
-import { Icons } from '../ui/icons'
+import { ScrollArea } from '../../../components/ui/scroll-area'
+import { cn } from '../../../lib/utils'
+import { Icons } from '../../../components/ui/icons'
 import { AgentDrawer } from './AgentDrawer'
 
 type AgentMeta = { label: string; icon: (props: React.SVGProps<SVGSVGElement>) => React.ReactElement; description: string }

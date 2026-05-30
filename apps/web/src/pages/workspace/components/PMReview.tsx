@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { toast } from '../../store/toast-store'
+import { toast } from '../../../store/toast-store'
 import {
   useWorkspaceStore,
   selectDraftSpec,
   selectAgentJobId,
   type DraftFeature,
-} from '../../store/workspace-store'
-import { Button } from '../ui/button'
-import { Textarea } from '../ui/textarea'
-import { Icons } from '../ui/icons'
-import { Checkbox } from '../ui/checkbox'
-import { ScrollArea } from '../ui/scroll-area'
-import { cn } from '../../lib/utils'
+} from '../../../store/workspace-store'
+import { Button } from '../../../components/ui/button'
+import { Textarea } from '../../../components/ui/textarea'
+import { Icons } from '../../../components/ui/icons'
+import { Checkbox } from '../../../components/ui/checkbox'
+import { ScrollArea } from '../../../components/ui/scroll-area'
+import { cn } from '../../../lib/utils'
 
 const CONFIDENCE_LABEL: Record<DraftFeature['confidence'], string> = {
   high:   '必需',

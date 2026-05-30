@@ -1,10 +1,10 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuthStore, selectIsAuthed } from '@forge/core'
 import { AppShell } from './components/layout/AppShell'
-import { LoginPage } from './pages/LoginPage'
-import { ProjectsPage } from './pages/ProjectsPage'
-import { WorkspacePage } from './pages/WorkspacePage'
-import { SettingsPage } from './pages/SettingsPage'
+import { LoginPage } from './pages/login'
+import { ProjectsPage } from './pages/projects'
+import { WorkspacePage } from './pages/workspace'
+import { SettingsPage } from './pages/settings'
 
 function ProtectedRoute() {
   const isAuthed = useAuthStore(selectIsAuthed)

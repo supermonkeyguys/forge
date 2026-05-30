@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLogin, useDevLogin, ApiError } from '@forge/core'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Icons } from '../components/ui/icons'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Icons } from '../../components/ui/icons'
 
 export function LoginPage() {
   const navigate = useNavigate()

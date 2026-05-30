@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useWorkspaceStore, selectEvents, type AgentCardState } from '../../store/workspace-store'
-import { ScrollArea } from '../ui/scroll-area'
-import { Icons } from '../ui/icons'
-import { cn } from '../../lib/utils'
+import { useWorkspaceStore, selectEvents, type AgentCardState } from '../../../store/workspace-store'
+import { ScrollArea } from '../../../components/ui/scroll-area'
+import { Icons } from '../../../components/ui/icons'
+import { cn } from '../../../lib/utils'
 import type { AgentEvent } from '@forge/core'
 
 interface AgentDrawerProps {

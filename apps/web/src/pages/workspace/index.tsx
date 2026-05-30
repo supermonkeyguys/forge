@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { useAgentEvents } from '../hooks/useAgentEvents'
-import { useWorkspaceStore, selectProjectId } from '../store/workspace-store'
-import { ConversationPanel } from '../components/left-panel/ConversationPanel'
-import { AgentFlowPanel } from '../components/center-panel/AgentFlowPanel'
-import { PreviewPanel } from '../components/right-panel/PreviewPanel'
+import { useAgentEvents } from '../../hooks/useAgentEvents'
+import { useWorkspaceStore, selectProjectId } from '../../store/workspace-store'
+import { ConversationPanel } from './components/ConversationPanel'
+import { AgentFlowPanel } from './components/AgentFlowPanel'
+import { PreviewPanel } from './components/PreviewPanel'
 
 export function WorkspacePage() {
   const { id } = useParams<{ id: string }>()
