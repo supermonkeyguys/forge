@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { notifyGoAPI } from './index.js'
+import { notifyGoAPI } from './lib/go-api-client.js'
 
 describe('notifyGoAPI', () => {
   let originalEnv: NodeJS.ProcessEnv

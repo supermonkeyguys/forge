@@ -16,10 +16,12 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomUUID } from 'node:crypto'
 import { Orchestrator } from './orchestrator/orchestrator.js'
 import { ForgeSandbox } from './sandbox/e2b-client.js'
+import { MockSandbox } from './sandbox/mock-sandbox.js'
 import { loadNextjsTemplate } from './sandbox/template-loader.js'
 import type { OrchestratorState, OrchestratorContext } from './orchestrator/state-machine.js'
 import type { ProgressEvent } from './agents/types.js'
 import type { DraftSpec } from './agents/pm-agent.js'
+import { notifyGoAPI } from './lib/go-api-client.js'
 
 // ── Job store ─────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ interface Job {
   reviewUrl: string | null
   reviewHtml: string | null    // raw HTML cached from sandbox write, served via GET /review/:jobId
   error: string | null
+  waitingReason: string | null  // set when status === 'waiting'
   createdAt: string
   updatedAt: string
   // Internal: resolve the onDraftReady promise when frontend confirms
@@ -106,6 +109,7 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
     reviewUrl: null,
     reviewHtml: null,
     error: null,
+    waitingReason: null,
     createdAt: now,
     updatedAt: now,
     _draftResolve: null,
@@ -211,50 +215,24 @@ async function handleConfirmDraft(
   send(res, 200, { data: { jobId, status: 'confirmed' } })
 }
 
-// ── Go API callback ─────────────────────────────────────────────────
-
-export async function notifyGoAPI(
-  taskId: string,
-  status: string,
-  extras?: { previewUrl?: string; errorMsg?: string },
-): Promise<void> {
-  const apiUrl = process.env['FORGE_API_URL']
-  if (!apiUrl) return
-
-  const token = process.env['INTERNAL_TOKEN'] ?? ''
-  const body = JSON.stringify({
-    status,
-    previewUrl: extras?.previewUrl ?? '',
-    errorMsg: extras?.errorMsg ?? '',
-  })
-
-  try {
-    await fetch(`${apiUrl}/internal/tasks/${taskId}/status`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'X-Internal-Token': token } : {}),
-      },
-      body,
-      signal: AbortSignal.timeout(5000),
-    })
-  } catch (err) {
-    console.error(`[notifyGoAPI] failed to update task ${taskId} status to ${status}:`, err)
-  }
-}
-
 // ── Job runner ────────────────────────────────────────────────────
 
 async function runJob(job: Job, userInput: string): Promise<void> {
   job.status = 'running'
   job.updatedAt = new Date().toISOString()
 
-  // Create E2B sandbox
-  const sandbox = await ForgeSandbox.create()
+  // Create sandbox — use MockSandbox when E2B key is placeholder/mock
+  const e2bKey = process.env['E2B_API_KEY'] ?? ''
+  const useMock = !e2bKey || e2bKey === 'mock' || e2bKey.startsWith('e2b_your')
+  const sandbox = useMock
+    ? new MockSandbox()
+    : await ForgeSandbox.create()
 
-  // Push Next.js template files
-  const templateFiles = loadNextjsTemplate()
-  await sandbox.writeFiles(templateFiles)
+  // Push Next.js template files (real sandbox only)
+  if (!useMock) {
+    const templateFiles = loadNextjsTemplate()
+    await (sandbox as ForgeSandbox).writeFiles(templateFiles)
+  }
 
   // Build the sandbox adapter (matches SandboxInterface in orchestrator)
   const sandboxAdapter = {
@@ -276,6 +254,7 @@ async function runJob(job: Job, userInput: string): Promise<void> {
     onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => {
       job.status = state
       if (ctx.reviewUrl) job.reviewUrl = ctx.reviewUrl    // sync reviewUrl from orchestrator context
+      if (state === 'waiting' && ctx.pendingUserInput) job.waitingReason = ctx.pendingUserInput
       job.updatedAt = new Date().toISOString()
       if (job.taskId) {
         const extras =
@@ -313,11 +292,14 @@ async function runJob(job: Job, userInput: string): Promise<void> {
   job.updatedAt = new Date().toISOString()
   job._orchestrator = null
 
-  // Keep sandbox alive for preview if done, kill otherwise
-  if (result.state === 'done') {
-    await sandbox.keepAlive(30 * 60 * 1000) // 30 min
-  } else {
-    await sandbox.kill()
+  // Keep sandbox alive for preview if done, kill otherwise (no-op for mock)
+  if (!useMock) {
+    const realSandbox = sandbox as ForgeSandbox
+    if (result.state === 'done') {
+      await realSandbox.keepAlive(30 * 60 * 1000)
+    } else {
+      await realSandbox.kill()
+    }
   }
 }
 
@@ -363,6 +345,35 @@ const server = createServer((req, res) => {
     if (!job.reviewHtml) return sendError(res, 404, 'review HTML not ready yet')
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
     res.end(job.reviewHtml)
+    return
+  }
+
+  // GET /jobs/project/:projectId — latest job for a project with incremental events
+  // ?since=N returns only events at index >= N (for incremental polling)
+  const jobsByProjectMatch = url.match(/^\/jobs\/project\/([^/?]+)/)
+  if (method === 'GET' && jobsByProjectMatch) {
+    const pid = jobsByProjectMatch[1]!
+    const sinceParam = new URL(`http://x${url}`).searchParams.get('since')
+    const since = sinceParam ? parseInt(sinceParam, 10) : 0
+
+    // Find the most recent job for this project
+    let latest: Job | null = null
+    for (const job of jobs.values()) {
+      if (job.projectId === pid) {
+        if (!latest || job.createdAt > latest.createdAt) latest = job
+      }
+    }
+
+    if (!latest) return send(res, 200, { data: null })
+
+    const { _draftResolve: _r, _orchestrator: _o, reviewHtml: _h, ...safe } = latest
+    send(res, 200, {
+      data: {
+        ...safe,
+        events: latest.events.slice(since),
+        totalEvents: latest.events.length,
+      },
+    })
     return
   }
 
