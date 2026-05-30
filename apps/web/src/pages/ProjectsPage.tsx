@@ -4,6 +4,7 @@ import { useProjects, useDeleteProject, type Project, type ProjectStatus } from 
 import { toast } from '../store/toast-store'
 import { LoadingState, ErrorState } from '../components/project-card/project-page-states'
 import { cn } from '../lib/utils'
+import { Icons } from '../components/ui/icons'
 
 // ── Status → column mapping ────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ function KanbanColumn({
       {/* Dashed lane — stretches full height */}
       <div
         className={cn(
-          'col-lane-inner flex flex-1 flex-col gap-2 overflow-hidden rounded-[14px] border-[1.5px] border-dashed p-2.5',
+          'col-lane-inner flex flex-1 flex-col gap-2 overflow-y-auto rounded-[14px] border-[1.5px] border-dashed p-2.5',
           meta.laneClass,
         )}
       >
@@ -212,7 +213,7 @@ function KanbanCard({ project, onOpen, onDelete }: {
   return (
     <div
       className={cn(
-        'project-card flex-shrink-0 cursor-pointer rounded-[9px] border border-white/[0.08] p-3',
+        'project-card group relative flex-shrink-0 cursor-pointer rounded-[9px] border border-white/[0.08] p-3',
         'bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.18)]',
         'transition-colors hover:border-white/[0.15] hover:bg-white/[0.065]',
       )}
@@ -220,7 +221,16 @@ function KanbanCard({ project, onOpen, onDelete }: {
       data-card-id={project.id}
       data-col={colKey}
     >
-      <p className="mb-2 text-[12.5px] font-medium leading-snug text-white/80">{project.name}</p>
+      {/* Delete button — top-right, visible on card hover */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(project.id) }}
+        className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/[0.1] text-white/30 hover:text-red-400"
+        title="删除"
+      >
+        <Icons.X className="h-3 w-3" />
+      </button>
+
+      <p className="mb-2 pr-4 text-[12.5px] font-medium leading-snug text-white/80">{project.name}</p>
 
       {/* Progress bar */}
       {progress !== undefined && (
@@ -258,20 +268,12 @@ function KanbanCard({ project, onOpen, onDelete }: {
           </button>
         )}
         {colKey === 'failed' && (
-          <>
-            <button
-              onClick={() => onOpen(project.id)}
-              className="flex-1 rounded-md bg-white/[0.06] py-1 text-[11px] text-white/50 transition-colors hover:bg-white/[0.1] hover:text-white/75"
-            >
-              重试
-            </button>
-            <button
-              onClick={() => onDelete(project.id)}
-              className="flex-1 rounded-md bg-destructive/[0.1] py-1 text-[11px] text-red-400 transition-colors hover:bg-destructive/[0.2]"
-            >
-              删除
-            </button>
-          </>
+          <button
+            onClick={() => onOpen(project.id)}
+            className="flex-1 rounded-md bg-white/[0.06] py-1 text-[11px] text-white/50 transition-colors hover:bg-white/[0.1] hover:text-white/75"
+          >
+            重试
+          </button>
         )}
       </div>
     </div>
