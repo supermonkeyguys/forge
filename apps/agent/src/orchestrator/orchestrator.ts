@@ -275,9 +275,14 @@ export class Orchestrator {
   // ── Phase: analyzing ─────────────────────────────────────────
 
   private async stepAnalyze(): Promise<void> {
-    this.emit({ type: 'agent_start', agent: 'pm', message: 'Analyzing requirements...' })
-
     const draft = await this.pm.draft(this.ctx.userInput, this.deps.onEvent)
+
+    // Post-LLM: surface what the PM actually found
+    this.emit({
+      type: 'agent_thinking',
+      agent: 'pm',
+      content: `"${draft.title}" — ${draft.features.length} feature(s) in ${draft.business_domain}`,
+    })
 
     // Generate A2UI review HTML and write to sandbox
     const confirmUrl = `${process.env.AGENT_BASE_URL ?? 'http://localhost:3001'}/confirm-draft/${this.ctx.projectId}`
@@ -298,9 +303,22 @@ export class Orchestrator {
   // ── Phase: planning ───────────────────────────────────────────
 
   private async stepPlan(): Promise<void> {
-    this.emit({ type: 'agent_start', agent: 'architect', message: 'Planning implementation...' })
+    this.emit({
+      type: 'agent_start',
+      agent: 'architect',
+      message: `Planning "${this.spec!.title}"...`,
+    })
 
     this.plan = await this.architect.plan(this.spec!, this.deps)
+
+    // Post-LLM: surface task breakdown
+    const roles = [...new Set(this.plan.tasks.map((t) => t.agent))]
+    this.emit({
+      type: 'agent_thinking',
+      agent: 'architect',
+      content: `${this.plan.tasks.length} task(s) → ${roles.join(', ')}`,
+    })
+
     const context = this.architect.buildInitialContext(this.spec!, this.plan)
 
     await Promise.all([

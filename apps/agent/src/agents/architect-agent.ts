@@ -16,7 +16,7 @@
  *   - HTTP routes       → app/api/
  */
 
-import { generateObject } from 'ai'
+import { llmText as generateText } from '../lib/ai-client.js'
 import { anthropic, MODEL } from '../lib/ai-client.js'
 import { z } from 'zod'
 import type { Spec } from '../contracts/spec.js'
@@ -37,13 +37,22 @@ const LLMPlanTaskSchema = z.object({
   file: z.string(),
   description: z.string(),
   depends_on: z.array(z.string()).default([]),
-  feature_ids: z.array(z.string()).optional(),
+  feature_ids: z.array(z.string()).default([]),
 })
 
 const LLMTaskPlanSchema = z.object({
   tech_decisions: z.record(z.string()),
   tasks: z.array(LLMPlanTaskSchema).min(1),
 })
+
+function extractJSON(text: string): string {
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) return fenceMatch[1]!.trim()
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start !== -1 && end !== -1) return text.slice(start, end + 1)
+  return text.trim()
+}
 
 // ── System prompt ────────────────────────────────────────────────
 
@@ -124,12 +133,13 @@ export class ArchitectAgent implements Agent {
   async plan(spec: Spec, ctx?: Pick<AgentRunContext, 'emit'>): Promise<TaskPlan> {
     const emit = ctx?.emit ?? (() => {})
 
-    const { object } = await generateObject({
+    const { text } = await generateText({
       model: anthropic(MODEL),
-      schema: LLMTaskPlanSchema,
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + '\n\nRespond with ONLY a valid JSON object. No markdown, no explanation.',
       prompt: buildPlanPrompt(spec),
     })
+
+    const object = LLMTaskPlanSchema.parse(JSON.parse(extractJSON(text)))
 
     // Merge LLM output with schema defaults (status: 'pending')
     const plan: TaskPlan = TaskPlanSchema.parse({
@@ -146,6 +156,17 @@ export class ArchitectAgent implements Agent {
       agent: 'architect',
       file: 'contracts/task_plan.json',
       action: 'create',
+    })
+
+    const techSummary = Object.entries(plan.tech_decisions)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ')
+    emit({
+      type: 'agent_thinking',
+      agent: 'architect',
+      content: techSummary
+        ? `Tech: ${techSummary}`
+        : `${plan.tasks.length} task(s) planned`,
     })
 
     return plan
@@ -250,7 +271,7 @@ function buildPlanPrompt(spec: Spec): string {
     .map(([k]) => `  - ${k}`)
     .join('\n')
 
-  return `Create a file-level implementation plan for this app:
+  return `Create a file-level implementation plan for this app.
 
 ## App: ${spec.title}
 ${spec.description}
@@ -261,14 +282,29 @@ ${featuresText}
 ## Technical constraints:
 ${constraintsText || '  (none beyond the defaults)'}
 
-Generate tasks covering ALL of the following for each feature:
-1. Schema Agent task (if database needed)
-2. Logic Agent task for business logic + a .test.ts task
-3. API Agent task for HTTP routes
-4. UI Agent tasks for each new component + .stories.tsx
-5. Page Agent task for each new page
+Respond with ONLY this JSON structure (no markdown, no explanation):
+{
+  "tech_decisions": {
+    "database": "prisma + postgresql",
+    "auth": "jwt + bcrypt",
+    "styling": "tailwind css"
+  },
+  "tasks": [
+    {
+      "id": "T001",
+      "agent": "schema",
+      "action": "create",
+      "file": "prisma/schema.prisma",
+      "description": "what this task does",
+      "depends_on": [],
+      "feature_ids": ["F001"]
+    }
+  ]
+}
 
-Remember: every core hook and UI component needs a companion test/story task.`
+Agent values must be one of: "schema", "logic", "api", "ui", "page"
+Action values must be one of: "create", "modify", "delete"
+Generate tasks covering schema (if DB needed), logic, api, ui, and page agents for each feature.`
 }
 
 function validateDependencies(plan: TaskPlan): void {

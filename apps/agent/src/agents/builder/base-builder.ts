@@ -20,8 +20,9 @@
  *   fix path:     read(1) → write(1) → tsc(1) → str_replace(1) → tsc(1) = 5 steps
  */
 
-import { generateText, tool } from 'ai'
-import { anthropic, MODEL } from '../../lib/ai-client.js'
+import { tool } from 'ai'
+import { llmText as generateText } from '../../lib/ai-client.js'
+import { anthropic, BUILDER_MODEL as MODEL } from '../../lib/ai-client.js'
 import { z } from 'zod'
 import type { AgentRunContext, AgentResult, BuilderAgent, BuilderTaskInput, ProgressEvent } from '../types.js'
 import type { PlanTask, AgentRole } from '../../contracts/task-plan.js'
@@ -217,10 +218,12 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
     sandbox?: SandboxInterface,
     spawnFn?: SpawnTaskFn,
   ): Promise<string> {
+    const filename = input.task.file.split('/').pop() ?? input.task.file
+    const action = input.task.action === 'create' ? 'Creating' : 'Modifying'
     emit({
       type: 'agent_thinking',
       agent: this.role,
-      content: `[${input.task.id}] ${input.task.description.slice(0, 80)}...`,
+      content: `${action} ${filename} — ${input.task.description.slice(0, 60)}`,
     })
 
     if (!sandbox) {
@@ -247,7 +250,7 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
     emit({
       type: 'agent_thinking',
       agent: this.role,
-      content: `[${input.task.id}] done in ${steps.length} step(s)`,
+      content: `${filename} done (${steps.length} tool call${steps.length !== 1 ? 's' : ''})`,
     })
 
     return text ?? ''

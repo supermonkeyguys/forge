@@ -12,8 +12,7 @@
  *   finalize() → takes user-reviewed DraftSpec → writes spec.json to sandbox
  */
 
-import { generateObject } from 'ai'
-import { anthropic, MODEL } from '../lib/ai-client.js'
+import { llmText as generateText, anthropic, MODEL } from '../lib/ai-client.js'
 import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -60,7 +59,7 @@ const LLMDraftSchema = z.object({
       name: z.string(),
       confidence: z.enum(['high', 'medium', 'low']),
       acceptance_criteria: z.array(z.string()),
-      out_of_scope: z.array(z.string()).optional().default([]),
+      out_of_scope: z.array(z.string()).default([]),
     }),
   ),
   constraints: z.object({
@@ -75,10 +74,10 @@ const LLMDraftSchema = z.object({
       id: z.string(),
       question: z.string(),
       type: z.enum(['single', 'multiple', 'text']),
-      options: z.array(z.string()).optional(),
+      options: z.array(z.string()).default([]),
       required: z.boolean(),
     })
-  ).optional().default([]),
+  ).default([]),
 })
 
 export type ClarifyingQuestion = z.infer<typeof LLMDraftSchema>['clarifying_questions'][number]
@@ -114,6 +113,19 @@ Key principles:
 5. Mark features as selected=true by default for high/medium confidence,
    selected=false for low confidence.`
 
+// ── Helpers ───────────────────────────────────────────────────────
+
+function extractJSON(text: string): string {
+  // Strip markdown code fences if present
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) return fenceMatch[1]!.trim()
+  // Find first { and last }
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start !== -1 && end !== -1) return text.slice(start, end + 1)
+  return text.trim()
+}
+
 // ── PM Agent ─────────────────────────────────────────────────────
 
 export class PMAgent implements Agent {
@@ -121,26 +133,27 @@ export class PMAgent implements Agent {
 
   /** Phase 1: generate draft spec for user review */
   async draft(userInput: string, emit: AgentRunContext['emit']): Promise<DraftSpec> {
-    emit({ type: 'agent_start', agent: 'pm', message: 'Analyzing your requirements...' })
-    emit({ type: 'agent_thinking', agent: 'pm', content: 'Identifying business domain and implicit requirements...' })
+    const preview = userInput.length > 72 ? userInput.slice(0, 72) + '…' : userInput
+    emit({ type: 'agent_start', agent: 'pm', message: `Analyzing: "${preview}"` })
+    emit({ type: 'agent_thinking', agent: 'pm', content: 'Identifying domain, user stories, implicit constraints…' })
 
-    const { object } = await generateObject({
+    const { text } = await generateText({
       model: anthropic(MODEL),
-      schema: LLMDraftSchema,
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + '\n\nRespond with ONLY a valid JSON object matching the schema. No markdown, no explanation.',
       prompt: buildDraftPrompt(userInput),
     })
+
+    const object = LLMDraftSchema.parse(JSON.parse(extractJSON(text)))
 
     const draft: DraftSpec = {
       title: object.title,
       description: object.description,
       business_domain: object.business_domain,
       constraints: object.constraints,
-      clarifying_questions: object.clarifying_questions,
+      clarifying_questions: object.clarifying_questions ?? [],
       features: object.features.map((f) => ({
         ...f,
         out_of_scope: f.out_of_scope ?? [],
-        // Auto-select high and medium confidence features
         selected: f.confidence !== 'low',
       })),
     }
@@ -228,13 +241,36 @@ function buildDraftPrompt(userInput: string): string {
 
 "${userInput}"
 
-Generate a comprehensive spec. Include implicit requirements the user likely needs
-but didn't mention — things standard for this type of app.
+Generate a comprehensive spec. Include implicit requirements the user likely needs but didn't mention.
 
-For the business_domain field, use a short hyphenated identifier like:
-expense-management, e-commerce, project-management, appointment-booking,
-inventory-management, crm, blog-platform, todo-app, etc.
+Respond with ONLY this JSON structure (no markdown, no explanation):
+{
+  "title": "short app name",
+  "description": "one sentence description",
+  "business_domain": "hyphenated-domain-id (e.g. task-management, expense-management, e-commerce)",
+  "features": [
+    {
+      "id": "F001",
+      "name": "Feature Name",
+      "confidence": "high|medium|low",
+      "acceptance_criteria": ["specific testable criterion 1", "criterion 2"],
+      "out_of_scope": []
+    }
+  ],
+  "constraints": {
+    "auth": true,
+    "database": true,
+    "file_upload": false,
+    "email": false,
+    "payments": false
+  },
+  "clarifying_questions": []
+}
 
-Ensure acceptance_criteria are specific enough that a developer and an automated
-test could independently verify them. Avoid vague language.`
+Rules:
+- confidence "high" = every app of this type needs it
+- confidence "medium" = most apps need it
+- confidence "low" = optional/complex features
+- acceptance_criteria must be specific and testable
+- Include 3-6 features minimum`
 }
