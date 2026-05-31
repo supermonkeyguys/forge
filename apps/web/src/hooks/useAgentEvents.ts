@@ -7,9 +7,21 @@
 import { useEffect, useRef } from 'react'
 import { useAuthStore, selectToken } from '@forge/core'
 import { useWorkspaceStore } from '../store/workspace-store'
-import type { AgentEvent } from '@forge/core'
+import type { AgentEvent, ProjectStatus } from '@forge/core'
 
 const TERMINAL_STATUSES = new Set(['done', 'aborted', 'failed'])
+
+// Map agent service job.status → ProjectStatus for the OrchestratorBar
+const STATUS_MAP: Record<string, ProjectStatus> = {
+  analyzing: 'analyzing',
+  planning:  'planning',
+  building:  'building',
+  validating: 'validating',
+  fixing:    'fixing',
+  waiting:   'waiting',
+  done:      'done',
+  aborted:   'failed',
+}
 
 export function useAgentEvents(projectId: string | null) {
   const token = useAuthStore(selectToken)
@@ -19,6 +31,7 @@ export function useAgentEvents(projectId: string | null) {
   const setDraftSpec = useWorkspaceStore((s) => s.setDraftSpec)
   const setAgentJobId = useWorkspaceStore((s) => s.setAgentJobId)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
+  const setOrchestratorState = useWorkspaceStore((s) => s.setOrchestratorState)
   const phase = useWorkspaceStore((s) => s.phase)
   const phaseRef = useRef(phase)
   phaseRef.current = phase
@@ -80,6 +93,10 @@ export function useAgentEvents(projectId: string | null) {
           addEvent(event)
         }
 
+        // Sync orchestrator state for the OrchestratorBar
+        const mappedStatus = STATUS_MAP[job.status]
+        if (mappedStatus) setOrchestratorState(mappedStatus)
+
         // PM draft detected — show review UI
         if (job.draft && !draftShown && phaseRef.current !== 'pm-review') {
           draftShown = true
@@ -95,9 +112,12 @@ export function useAgentEvents(projectId: string | null) {
           setPhase('pm-review')
         }
 
-        // Draft was confirmed — draft is now null
+        // Draft was confirmed — go back to running to show agent cards
         if (!job.draft && draftShown) {
           draftShown = false
+          if (phaseRef.current === 'pm-review') {
+            setPhase('running')
+          }
         }
 
         if (job.status === 'done' && job.previewUrl) {
@@ -122,5 +142,5 @@ export function useAgentEvents(projectId: string | null) {
       active = false
       clearInterval(interval)
     }
-  }, [projectId, addEvent, setPreviewUrl, setWaiting, setDraftSpec, setAgentJobId, setPhase])
+  }, [projectId, addEvent, setPreviewUrl, setWaiting, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
 }

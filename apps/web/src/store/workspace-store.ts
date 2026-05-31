@@ -71,6 +71,7 @@ interface WorkspaceState {
   // ── Project ──────────────────────────────────────────────────
   projectId: string | null
   orchestratorState: ProjectStatus | null
+  setOrchestratorState: (state: ProjectStatus | null) => void
   previewUrl: string | null
 
   // ── PM Review ────────────────────────────────────────────────
@@ -132,6 +133,7 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
 
   setUserInput: (v) => set({ userInput: v }),
   setPhase: (p) => set({ phase: p }),
+  setOrchestratorState: (state) => set({ orchestratorState: state }),
   setDraftSpec: (d) => set({ draftSpec: d }),
   setConfirmedSpec: (s) => set({ confirmedSpec: s }),
 
