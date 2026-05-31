@@ -23,7 +23,7 @@ func (r *taskRepo) Create(ctx context.Context, t domain.Task) (domain.Task, erro
 	const q = `
 		INSERT INTO tasks (id, project_id, user_id, prompt, status, preview_url, error_msg, created_at, updated_at)
 		VALUES (gen_random_uuid()::text, $1, $2, $3, $4, '', '', now(), now())
-		RETURNING id, project_id, user_id, prompt, status, preview_url, error_msg, created_at, updated_at`
+		RETURNING id, project_id, user_id, prompt, status, preview_url, error_msg, events_json, created_at, updated_at`
 
 	row := r.pool.QueryRow(ctx, q, t.ProjectID, t.UserID, t.Prompt, string(t.Status))
 	result, err := scanTask(row)
@@ -38,7 +38,7 @@ func (r *taskRepo) Create(ctx context.Context, t domain.Task) (domain.Task, erro
 
 func (r *taskRepo) GetByID(ctx context.Context, id string) (domain.Task, error) {
 	const q = `
-		SELECT id, project_id, user_id, prompt, status, preview_url, error_msg, created_at, updated_at
+		SELECT id, project_id, user_id, prompt, status, preview_url, error_msg, events_json, created_at, updated_at
 		FROM tasks WHERE id = $1`
 
 	row := r.pool.QueryRow(ctx, q, id)
@@ -49,9 +49,23 @@ func (r *taskRepo) GetByID(ctx context.Context, id string) (domain.Task, error) 
 	return task, err
 }
 
+func (r *taskRepo) GetLatestByProjectID(ctx context.Context, projectID string) (domain.Task, error) {
+	const q = `
+		SELECT id, project_id, user_id, prompt, status, preview_url, error_msg, events_json, created_at, updated_at
+		FROM tasks WHERE project_id = $1
+		ORDER BY created_at DESC LIMIT 1`
+
+	row := r.pool.QueryRow(ctx, q, projectID)
+	task, err := scanTask(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Task{}, fmt.Errorf("taskRepo.GetLatestByProjectID: %w", domain.ErrNotFound)
+	}
+	return task, err
+}
+
 func (r *taskRepo) ListByProjectID(ctx context.Context, projectID string, limit, offset int) ([]domain.Task, error) {
 	const q = `
-		SELECT id, project_id, user_id, prompt, status, preview_url, error_msg, created_at, updated_at
+		SELECT id, project_id, user_id, prompt, status, preview_url, error_msg, events_json, created_at, updated_at
 		FROM tasks WHERE project_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
@@ -77,7 +91,7 @@ func (r *taskRepo) UpdateStatus(ctx context.Context, id string, status domain.Ta
 	const q = `
 		UPDATE tasks SET status = $2, preview_url = $3, error_msg = $4, updated_at = now()
 		WHERE id = $1
-		RETURNING id, project_id, user_id, prompt, status, preview_url, error_msg, created_at, updated_at`
+		RETURNING id, project_id, user_id, prompt, status, preview_url, error_msg, events_json, created_at, updated_at`
 
 	row := r.pool.QueryRow(ctx, q, id, string(status), previewURL, errorMsg)
 	task, err := scanTask(row)
@@ -87,6 +101,15 @@ func (r *taskRepo) UpdateStatus(ctx context.Context, id string, status domain.Ta
 	return task, err
 }
 
+func (r *taskRepo) SaveEvents(ctx context.Context, id string, eventsJSON string) error {
+	const q = `UPDATE tasks SET events_json = $2, updated_at = now() WHERE id = $1`
+	_, err := r.pool.Exec(ctx, q, id, eventsJSON)
+	if err != nil {
+		return fmt.Errorf("taskRepo.SaveEvents: %w", err)
+	}
+	return nil
+}
+
 func scanTask(row interface {
 	Scan(dest ...any) error
 }) (domain.Task, error) {
@@ -94,7 +117,7 @@ func scanTask(row interface {
 	var status string
 	err := row.Scan(
 		&t.ID, &t.ProjectID, &t.UserID, &t.Prompt,
-		&status, &t.PreviewURL, &t.ErrorMsg,
+		&status, &t.PreviewURL, &t.ErrorMsg, &t.EventsJSON,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {

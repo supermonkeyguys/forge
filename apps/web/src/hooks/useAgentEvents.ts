@@ -63,6 +63,25 @@ export function useAgentEvents(projectId: string | null) {
     let sinceIndex = 0
     let active = true
     let draftShown = false
+    let restoredFromDB = false
+
+    // Fallback: load persisted events from Go API when agent service has no live job
+    const restoreFromDB = async () => {
+      if (!token) return
+      try {
+        const res = await fetch(`/api/v1/projects/${projectId}/tasks/latest`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) return
+        const { data: task } = await res.json() as { data: { status: string; previewUrl: string; eventsJson: string } | null }
+        if (!task?.eventsJson || task.eventsJson === '[]') return
+        const events: AgentEvent[] = JSON.parse(task.eventsJson)
+        for (const event of events) addEvent(event)
+        const mapped = STATUS_MAP[task.status]
+        if (mapped) setOrchestratorState(mapped)
+        if (task.status === 'done' && task.previewUrl) setPreviewUrl(task.previewUrl)
+      } catch { /* DB fallback unavailable, ignore */ }
+    }
 
     const poll = async () => {
       if (!active) return
@@ -82,7 +101,14 @@ export function useAgentEvents(projectId: string | null) {
           }
         }
         const job = body.data
-        if (!job) return
+        if (!job) {
+          // No live job — attempt one-time restore from DB
+          if (!restoredFromDB) {
+            restoredFromDB = true
+            await restoreFromDB()
+          }
+          return
+        }
 
         // Store job ID on first contact
         if (sinceIndex === 0) setAgentJobId(job.id)
@@ -142,5 +168,5 @@ export function useAgentEvents(projectId: string | null) {
       active = false
       clearInterval(interval)
     }
-  }, [projectId, addEvent, setPreviewUrl, setWaiting, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
+  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
 }

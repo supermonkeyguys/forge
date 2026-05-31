@@ -25,6 +25,7 @@ type Task struct {
 	Status     TaskStatus `json:"status"`
 	PreviewURL string     `json:"previewUrl"`
 	ErrorMsg   string     `json:"errorMsg"`
+	EventsJSON string     `json:"eventsJson,omitempty"`
 	CreatedAt  time.Time  `json:"createdAt"`
 	UpdatedAt  time.Time  `json:"updatedAt"`
 }

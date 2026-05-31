@@ -23,8 +23,10 @@ type UserRepository interface {
 type TaskRepository interface {
 	Create(ctx context.Context, t Task) (Task, error)
 	GetByID(ctx context.Context, id string) (Task, error)
+	GetLatestByProjectID(ctx context.Context, projectID string) (Task, error)
 	ListByProjectID(ctx context.Context, projectID string, limit, offset int) ([]Task, error)
 	UpdateStatus(ctx context.Context, id string, status TaskStatus, previewURL, errorMsg string) (Task, error)
+	SaveEvents(ctx context.Context, id string, eventsJSON string) error
 }
 
 type SettingsRepository interface {

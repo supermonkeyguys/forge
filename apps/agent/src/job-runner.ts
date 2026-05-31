@@ -47,12 +47,13 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
         updatedAt: new Date().toISOString(),
       })
       if (current.taskId) {
-        const extras =
-          state === 'done'
-            ? { previewUrl: current.previewUrl ?? undefined }
-            : state === 'aborted'
-              ? { errorMsg: current.error ?? undefined }
-              : undefined
+        const isTerminal = state === 'done' || state === 'aborted'
+        const extras = {
+          ...(state === 'done'    ? { previewUrl: current.previewUrl ?? undefined } : {}),
+          ...(state === 'aborted' ? { errorMsg:   current.error    ?? undefined } : {}),
+          // Persist full event log on terminal state so the frontend can restore after restarts
+          ...(isTerminal ? { events: current.events } : {}),
+        }
         notifyGoAPI(current.taskId, state, extras).catch((err: unknown) => {
           console.error('[onStateChange] notifyGoAPI failed:', err)
         })

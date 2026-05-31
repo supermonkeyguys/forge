@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -28,9 +29,10 @@ func (h *InternalHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	var body struct {
-		Status     string `json:"status"`
-		PreviewURL string `json:"previewUrl"`
-		ErrorMsg   string `json:"errorMsg"`
+		Status     string          `json:"status"`
+		PreviewURL string          `json:"previewUrl"`
+		ErrorMsg   string          `json:"errorMsg"`
+		Events     json.RawMessage `json:"events,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		middleware.WriteFieldError(w, "body", "invalid JSON")
@@ -45,6 +47,13 @@ func (h *InternalHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		middleware.WriteError(w, err)
 		return
+	}
+
+	// Persist events when provided (sent on terminal states: done/failed)
+	if len(body.Events) > 0 && string(body.Events) != "null" {
+		if err := h.taskRepo.SaveEvents(r.Context(), taskID, string(body.Events)); err != nil {
+			log.Printf("[UpdateTaskStatus] SaveEvents taskID=%s err=%v", taskID, err)
+		}
 	}
 
 	middleware.WriteJSON(w, http.StatusOK, task)

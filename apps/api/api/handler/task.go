@@ -122,6 +122,25 @@ func (h *TaskHandler) Get(w http.ResponseWriter, r *http.Request) {
 	middleware.WriteJSON(w, http.StatusOK, task)
 }
 
+// GET /api/v1/projects/{projectID}/tasks/latest
+// Returns the most recent task for a project, including persisted events.
+func (h *TaskHandler) Latest(w http.ResponseWriter, r *http.Request) {
+	projectID := chi.URLParam(r, "projectID")
+	userID := middleware.UserIDFromContext(r.Context())
+
+	task, err := h.taskRepo.GetLatestByProjectID(r.Context(), projectID)
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	if task.UserID != userID {
+		middleware.WriteError(w, domain.ErrForbidden)
+		return
+	}
+
+	middleware.WriteJSON(w, http.StatusOK, task)
+}
+
 // GET /api/v1/tasks/{taskID}/stream
 // Server-Sent Events stream for real-time agent progress.
 func (h *TaskHandler) Stream(w http.ResponseWriter, r *http.Request) {
