@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -123,12 +124,17 @@ func (h *TaskHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /api/v1/projects/{projectID}/tasks/latest
-// Returns the most recent task for a project, including persisted events.
+// Returns the most recent task for a project, or null if none exists.
 func (h *TaskHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
 	userID := middleware.UserIDFromContext(r.Context())
 
 	task, err := h.taskRepo.GetLatestByProjectID(r.Context(), projectID)
+	if errors.Is(err, domain.ErrNotFound) {
+		// No task yet — return 200 with null so clients don't see a noisy 404
+		middleware.WriteJSON(w, http.StatusOK, nil)
+		return
+	}
 	if err != nil {
 		middleware.WriteError(w, err)
 		return

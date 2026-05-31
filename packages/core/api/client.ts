@@ -66,6 +66,11 @@ async function request<T>(
     )
   }
 
+  // 204 No Content or empty body — nothing to parse
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T
+  }
+
   return res.json() as Promise<T>
 }
 
