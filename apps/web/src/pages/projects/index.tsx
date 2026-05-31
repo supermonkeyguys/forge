@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjects, useDeleteProject, type Project, type ProjectStatus } from '@forge/core'
 import { toast } from '../../store/toast-store'
 import { LoadingState, ErrorState } from './components/PageStates'
 import { KanbanColumn } from './components/KanbanColumn'
+import { ConfirmModal } from '../../components/ui/confirm-modal'
 
 // ── Status → column mapping ────────────────────────────────────────────────
 
@@ -48,6 +50,10 @@ export function ProjectsPage() {
   const { mutate: deleteProject } = useDeleteProject()
   const projects = data?.data ?? []
 
+  // Pending delete — null means modal is closed
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const pendingProject = projects.find(p => p.id === pendingDeleteId)
+
   if (isLoading) return <div className="flex flex-1 items-center justify-center"><LoadingState /></div>
   if (isError)   return <div className="flex flex-1 items-center justify-center"><ErrorState /></div>
 
@@ -57,12 +63,13 @@ export function ProjectsPage() {
   ) as Record<ColKey, Project[]>
   for (const p of projects) columns[toColKey(p.status)].push(p)
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm('确定删除这个项目？此操作不可撤销。')) return
-    deleteProject(id, {
+  const handleConfirmDelete = () => {
+    if (!pendingDeleteId) return
+    deleteProject(pendingDeleteId, {
       onSuccess: () => toast.success('项目已删除'),
       onError: () => toast.error('删除失败，请稍后重试'),
     })
+    setPendingDeleteId(null)
   }
 
   return (
@@ -89,10 +96,26 @@ export function ProjectsPage() {
             colKey={colKey}
             projects={columns[colKey]}
             onOpen={id => navigate(`/projects/${id}`)}
-            onDelete={handleDelete}
+            onDelete={setPendingDeleteId}
           />
         ))}
       </div>
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        open={pendingDeleteId !== null}
+        title="删除项目"
+        description={
+          pendingProject
+            ? <>确定删除「<span className="text-white/75">{pendingProject.name}</span>」？此操作不可撤销。</>
+            : '确定删除这个项目？此操作不可撤销。'
+        }
+        confirmLabel="删除"
+        cancelLabel="取消"
+        dangerous
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }

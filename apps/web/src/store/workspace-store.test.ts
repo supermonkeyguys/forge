@@ -76,7 +76,7 @@ describe('workspace-store', () => {
     it('deduplicates when same file is written twice (create then patch)', () => {
       useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'api', message: 'start' })
       useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'api', file: 'src/routes.ts', action: 'create' })
-      useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'api', file: 'src/routes.ts', action: 'patch' })
+      useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'api', file: 'src/routes.ts', action: 'modify' })
       const card = useWorkspaceStore.getState().agentCards['api']!
       // Should appear only once — prevents React duplicate key warning
       expect(card.filesWritten).toHaveLength(1)
@@ -86,7 +86,7 @@ describe('workspace-store', () => {
     it('deduplicates when same file appears many times', () => {
       useWorkspaceStore.getState().addEvent({ type: 'agent_start', agent: 'ui', message: 'start' })
       for (let i = 0; i < 5; i++) {
-        useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'ui', file: 'src/Button.tsx', action: 'patch' })
+        useWorkspaceStore.getState().addEvent({ type: 'agent_file_write', agent: 'ui', file: 'src/Button.tsx', action: 'modify' })
       }
       const card = useWorkspaceStore.getState().agentCards['ui']!
       expect(card.filesWritten).toHaveLength(1)
