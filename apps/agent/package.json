@@ -4,7 +4,7 @@
   "description": "Forge AI agent orchestration service",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file=.env ./node_modules/.bin/tsx watch src/index.ts",
+    "dev": "node --require dotenv/config ./node_modules/.bin/tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
@@ -15,6 +15,7 @@
     "@ai-sdk/openai": "^3.0.67",
     "ai": "^6.0.193",
     "bullmq": "^5.0.0",
+    "dotenv": "^17.4.2",
     "e2b": "^1.0.0",
     "zod": "^3.22.0"
   },

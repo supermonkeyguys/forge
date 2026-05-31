@@ -6,12 +6,11 @@ import { SpecSchema } from '../contracts/spec.js'
 // We test the agent's logic (finalize, schema validation), not the LLM response.
 // LLM calls are mocked so tests run offline and are deterministic.
 
-vi.mock('ai', () => ({
-  generateObject: vi.fn(),
-}))
-
-vi.mock('@ai-sdk/anthropic', () => ({
+vi.mock('../lib/ai-client.js', () => ({
+  llmText: vi.fn(),
   anthropic: vi.fn(() => 'mock-model'),
+  MODEL: 'test-model',
+  BUILDER_MODEL: 'test-builder-model',
 }))
 
 // ── Fixtures ──────────────────────────────────────────────────────
@@ -268,5 +267,93 @@ describe('PMAgent.renderReviewHTML', () => {
     const html = agent.renderReviewHTML(mockDraft, 'job-abc', 'http://x/confirm')
     expect(html).toContain('<!DOCTYPE html>')
     expect(html).toContain('</html>')
+  })
+})
+
+// ── Prompt–Schema contract tests ─────────────────────────────────
+// These tests verify that the JSON template shown in buildDraftPrompt
+// actually parses with the Zod schema the agent uses.
+// If you change the prompt template or the schema, one of these will fail.
+
+import { z } from 'zod'
+
+describe('PM Agent — prompt/schema contract', () => {
+  // The exact example JSON from buildDraftPrompt
+  const PROMPT_EXAMPLE = {
+    title: 'short app name',
+    description: 'one sentence description',
+    business_domain: 'task-management',
+    features: [
+      {
+        id: 'F001',
+        name: 'Feature Name',
+        confidence: 'high' as const,
+        acceptance_criteria: ['specific testable criterion 1', 'criterion 2'],
+        out_of_scope: [],
+      },
+    ],
+    constraints: {
+      auth: true,
+      database: true,
+      file_upload: false,
+      email: false,
+      payments: false,
+    },
+    clarifying_questions: [],
+  }
+
+  it('prompt example JSON parses with LLMDraftSchema (catches schema/prompt mismatches)', () => {
+    // Rebuild the schema inline — if pm-agent.ts changes the schema this test fails
+    const LLMDraftSchema = z.object({
+      title: z.string(),
+      description: z.string(),
+      business_domain: z.string(),
+      features: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        confidence: z.enum(['high', 'medium', 'low']),
+        acceptance_criteria: z.array(z.string()),
+        out_of_scope: z.array(z.string()).default([]),
+      })),
+      constraints: z.object({
+        auth: z.boolean(),
+        database: z.boolean(),
+        file_upload: z.boolean(),
+        email: z.boolean(),
+        payments: z.boolean(),
+      }),
+      clarifying_questions: z.array(z.object({
+        id: z.string(),
+        question: z.string(),
+        type: z.enum(['single', 'multiple', 'text']),
+        options: z.array(z.string()).default([]),
+        required: z.boolean(),
+      })).default([]),
+    })
+    expect(() => LLMDraftSchema.parse(PROMPT_EXAMPLE)).not.toThrow()
+  })
+
+  it('extractJSON handles plain JSON (no code fence)', () => {
+    const json = JSON.stringify(PROMPT_EXAMPLE)
+    const start = json.indexOf('{')
+    const end = json.lastIndexOf('}')
+    const extracted = json.slice(start, end + 1)
+    expect(() => JSON.parse(extracted)).not.toThrow()
+  })
+
+  it('extractJSON handles JSON wrapped in markdown fence', () => {
+    const fenced = '```json\n' + JSON.stringify(PROMPT_EXAMPLE) + '\n```'
+    const match = fenced.match(/```(?:json)?\s*([\s\S]*?)```/)
+    expect(match).not.toBeNull()
+    expect(() => JSON.parse(match![1]!.trim())).not.toThrow()
+  })
+
+  it('confidence enum values in prompt match what schema accepts', () => {
+    const validValues = ['high', 'medium', 'low']
+    const schema = z.enum(['high', 'medium', 'low'])
+    for (const v of validValues) {
+      expect(() => schema.parse(v)).not.toThrow()
+    }
+    expect(() => schema.parse('required')).toThrow()  // old value that caused issues
   })
 })

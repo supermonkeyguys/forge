@@ -19,8 +19,7 @@
  *                   VISUAL: capture screenshot + ask LLM "does this screenshot satisfy: <criterion>?"
  */
 
-import { generateObject, generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+import { llmText as generateText, anthropic, MODEL } from '../lib/ai-client.js'
 import { z } from 'zod'
 import type { Spec } from '../contracts/spec.js'
 import {
@@ -56,15 +55,24 @@ interface VitestJsonResult {
   }>
 }
 
+function extractJSON(text: string): string {
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) return fenceMatch[1]!.trim()
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start !== -1 && end !== -1) return text.slice(start, end + 1)
+  return text.trim()
+}
+
 // ── Criterion check plan (LLM-classified) ────────────────────────
 
 const CriterionCheckSchema = z.object({
   criterion: z.string(),
   method: z.enum(['http_probe', 'visual', 'skip']),
-  url: z.string().optional().describe('For http_probe: URL path to fetch (e.g. /api/projects)'),
-  expected_status: z.number().optional().describe('Expected HTTP status code'),
-  expected_body_contains: z.string().optional(),
-  skip_reason: z.string().optional(),
+  url: z.string().nullable().default(null).describe('For http_probe: URL path to fetch (e.g. /api/projects)'),
+  expected_status: z.number().nullable().default(null).describe('Expected HTTP status code'),
+  expected_body_contains: z.string().nullable().default(null),
+  skip_reason: z.string().nullable().default(null),
 })
 
 type CriterionCheck = z.infer<typeof CriterionCheckSchema>
@@ -175,12 +183,14 @@ export class TestAgent implements Agent {
 
     if (allCriteria.length === 0) return []
 
-    const { object } = await generateObject({
-      model: anthropic('claude-haiku-4-5-20251001'),
-      schema: z.object({ checks: z.array(CriterionCheckSchema) }),
+    const { text } = await generateText({
+      model: anthropic(MODEL),
+      system: 'Respond with ONLY a valid JSON object with a "checks" array. No markdown, no explanation.',
       prompt: buildCheckPlanPrompt(allCriteria),
     })
 
+    const raw = JSON.parse(extractJSON(text)) as { checks: unknown[] }
+    const object = z.object({ checks: z.array(CriterionCheckSchema) }).parse(raw)
     return object.checks
   }
 

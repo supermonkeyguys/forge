@@ -5,8 +5,12 @@ import type { Spec } from '../contracts/spec.js'
 
 // ── Mock ai SDK ───────────────────────────────────────────────────
 
-vi.mock('ai', () => ({ generateObject: vi.fn() }))
-vi.mock('@ai-sdk/anthropic', () => ({ anthropic: vi.fn(() => 'mock-model') }))
+vi.mock('../lib/ai-client.js', () => ({
+  llmText: vi.fn(),
+  anthropic: vi.fn(() => 'mock-model'),
+  MODEL: 'test-model',
+  BUILDER_MODEL: 'test-builder-model',
+}))
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
@@ -307,8 +311,8 @@ describe('ArchitectAgent.buildInitialContext()', () => {
 
 describe('ArchitectAgent.plan() — mocked LLM', () => {
   beforeEach(async () => {
-    const aiModule = await import('ai')
-    vi.mocked(aiModule.generateObject).mockResolvedValue({ object: mockLLMPlan } as any)
+    const aiClient = await import('../lib/ai-client.js')
+    vi.mocked(aiClient.llmText).mockResolvedValue({ text: JSON.stringify(mockLLMPlan), steps: [] } as any)
   })
 
   it('returns a valid TaskPlan', async () => {
@@ -330,20 +334,19 @@ describe('ArchitectAgent.plan() — mocked LLM', () => {
   })
 
   it('throws when depends_on references unknown task ID', async () => {
-    const { generateObject } = vi.mocked(await import('ai'))
-    generateObject.mockResolvedValue({
-      object: {
-        tech_decisions: {},
-        tasks: [{
-          id: 'T001',
-          agent: 'logic',
-          action: 'create',
-          file: 'f.ts',
-          description: 'd',
-          depends_on: ['T999'],  // T999 does not exist
-        }],
-      },
-    } as any)
+    const aiClient = await import('../lib/ai-client.js')
+    vi.mocked(aiClient.llmText).mockResolvedValue({ text: JSON.stringify({
+      tech_decisions: {},
+      tasks: [{
+        id: 'T001',
+        agent: 'logic',
+        action: 'create',
+        file: 'f.ts',
+        description: 'd',
+        depends_on: ['T999'],  // T999 does not exist
+        feature_ids: [],
+      }],
+    }), steps: [] } as any)
 
     const agent = new ArchitectAgent()
     await expect(agent.plan(mockSpec)).rejects.toThrow('unknown task ID "T999"')

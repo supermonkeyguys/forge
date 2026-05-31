@@ -10,8 +10,12 @@ import {
 } from '../contracts/validation-report.js'
 import type { Spec } from '../contracts/spec.js'
 
-vi.mock('ai', () => ({ generateObject: vi.fn(), generateText: vi.fn() }))
-vi.mock('@ai-sdk/anthropic', () => ({ anthropic: vi.fn(() => 'mock-model') }))
+vi.mock('../lib/ai-client.js', () => ({
+  llmText: vi.fn(),
+  anthropic: vi.fn(() => 'mock-model'),
+  MODEL: 'test-model',
+  BUILDER_MODEL: 'test-builder-model',
+}))
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
@@ -249,19 +253,20 @@ describe('TestAgent.validate() — mock sandbox', () => {
   })
 
   beforeEach(async () => {
-    const aiModule = await import('ai')
+    const aiClient = await import('../lib/ai-client.js')
     // Mock planE2EChecks to return skip for all criteria (avoid HTTP calls)
-    vi.mocked(aiModule.generateObject).mockResolvedValue({
-      object: {
-        checks: mockSpec.features.flatMap((f) =>
-          f.acceptance_criteria.map((c) => ({
-            criterion: c,
-            method: 'skip',
-            skip_reason: 'mocked',
-          })),
-        ),
-      },
-    } as any)
+    vi.mocked(aiClient.llmText).mockResolvedValue({ text: JSON.stringify({
+      checks: mockSpec.features.flatMap((f) =>
+        f.acceptance_criteria.map((c) => ({
+          criterion: c,
+          method: 'skip',
+          url: null,
+          expected_status: null,
+          expected_body_contains: null,
+          skip_reason: 'mocked',
+        })),
+      ),
+    }), steps: [] } as any)
   })
 
   it('returns passed when unit tests all pass and E2E skipped', async () => {

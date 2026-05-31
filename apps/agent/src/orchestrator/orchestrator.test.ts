@@ -16,13 +16,16 @@ import type { ValidationError } from '../contracts/validation-report.js'
 import type { TaskPlan, PlanTask } from '../contracts/task-plan.js'
 import type { DraftSpec } from '../agents/pm-agent.js'
 
-// ── Mock all agent LLM calls ──────────────────────────────────────
+// ── Mock all agent LLM calls via ai-client (single mock point) ────
+// All agents import llmText from '../lib/ai-client.js', not directly from 'ai'.
+// Mocking at this level means impl changes to the AI SDK don't break tests.
 
-vi.mock('ai', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('ai')>()
-  return { ...actual, generateObject: vi.fn(), generateText: vi.fn() }
-})
-vi.mock('@ai-sdk/anthropic', () => ({ anthropic: vi.fn(() => 'mock-model') }))
+vi.mock('../lib/ai-client.js', () => ({
+  llmText: vi.fn(),
+  anthropic: vi.fn(() => 'mock-model'),
+  MODEL: 'test-model',
+  BUILDER_MODEL: 'test-builder-model',
+}))
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
@@ -249,29 +252,26 @@ async function setupHappyPathMocks() {
   // Mock global fetch so startAndWaitForServer doesn't actually poll the network
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '<html>ok</html>' }))
 
-  const aiModule = await import('ai')
+  const aiClient = await import('../lib/ai-client.js')
 
-  // PM Agent draft()
-  vi.mocked(aiModule.generateObject)
-    .mockResolvedValueOnce({ object: {
-      title: 'Expense Manager',
-      description: 'Test',
-      business_domain: 'expense-management',
+  // Use mockImplementation to distinguish agents by system prompt — avoids call-order fragility
+  vi.mocked(aiClient.llmText).mockImplementation(async (opts) => {
+    const sys = (opts as any).system ?? ''
+    if (sys.includes('product manager')) return { text: JSON.stringify({
+      title: 'Expense Manager', description: 'Test', business_domain: 'expense-management',
       constraints: { auth: true, database: true, file_upload: false, email: false, payments: false },
       clarifying_questions: [],
       features: [{ id: 'F001', name: 'Submit', confidence: 'high', acceptance_criteria: ['User can submit form'], out_of_scope: [] }],
-    }} as any)
-    // Architect plan()
-    .mockResolvedValueOnce({ object: {
+    }), steps: [] } as any
+    if (sys.includes('Architect')) return { text: JSON.stringify({
       tech_decisions: { database: 'PostgreSQL' },
-      tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'prisma/schema.prisma', description: 'schema', depends_on: [] }],
-    }} as any)
-    // Test Agent planE2EChecks()
-    .mockResolvedValueOnce({ object: {
-      checks: [{ criterion: 'User can submit form', method: 'skip', skip_reason: 'mocked' }],
-    }} as any)
-
-  vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'model User {}', steps: [] } as any)
+      tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'prisma/schema.prisma', description: 'schema', depends_on: [], feature_ids: [] }],
+    }), steps: [] } as any
+    if (sys.includes('"checks"')) return { text: JSON.stringify({
+      checks: [{ criterion: 'User can submit form', method: 'skip', url: null, expected_status: null, expected_body_contains: null, skip_reason: 'mocked' }],
+    }), steps: [] } as any
+    return { text: 'model User {}', steps: [] } as any  // builder agents
+  })
 }
 
 describe('Orchestrator — happy path', () => {
@@ -363,22 +363,20 @@ describe('Orchestrator — retry + waiting', () => {
   async function setupRetryMocks() {
     vi.resetAllMocks()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => 'ok' }))
-    const aiModule = await import('ai')
+    const aiClient = await import('../lib/ai-client.js')
 
-    vi.mocked(aiModule.generateObject)
-      .mockResolvedValueOnce({ object: {
+    vi.mocked(aiClient.llmText)
+      .mockResolvedValueOnce({ text: JSON.stringify({
         title: 'T', description: 'T', business_domain: 'test',
         constraints: { auth: false, database: false, file_upload: false, email: false, payments: false },
         clarifying_questions: [],
         features: [{ id: 'F001', name: 'F', confidence: 'high', acceptance_criteria: ['x'], out_of_scope: [] }],
-      }} as any)
-      .mockResolvedValueOnce({ object: {
+      }), steps: [] } as any)
+      .mockResolvedValueOnce({ text: JSON.stringify({
         tech_decisions: {},
-        tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'f.prisma', description: 'd', depends_on: [] }],
-      }} as any)
-      .mockResolvedValue({ object: { checks: [] }} as any)
-
-    vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'code', steps: [] } as any)
+        tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'f.prisma', description: 'd', depends_on: [], feature_ids: [] }],
+      }), steps: [] } as any)
+      .mockResolvedValue({ text: JSON.stringify({ checks: [] }), steps: [] } as any)
   }
 
   beforeEach(async () => {
@@ -405,7 +403,7 @@ describe('Orchestrator — retry + waiting', () => {
   })
 
   it('resume() continues from waiting', async () => {
-    const aiModule = await import('ai')
+    const aiClient = await import('../lib/ai-client.js')
 
     const orc = new Orchestrator('proj-1', 'build', {
       sandbox: failSandbox,
@@ -422,18 +420,18 @@ describe('Orchestrator — retry + waiting', () => {
     vi.mocked(failSandbox.run).mockResolvedValue({ stdout: PASS_VITEST_OUTPUT, stderr: '', exitCode: 0 })
 
     // Fresh mock chain for the new analyzing → planning → validating cycle
-    vi.mocked(aiModule.generateObject)
-      .mockResolvedValueOnce({ object: {
+    vi.mocked(aiClient.llmText)
+      .mockResolvedValueOnce({ text: JSON.stringify({
         title: 'T2', description: 'T2', business_domain: 'test',
         constraints: { auth: false, database: false, file_upload: false, email: false, payments: false },
         clarifying_questions: [],
         features: [{ id: 'F001', name: 'F', confidence: 'high', acceptance_criteria: ['x'], out_of_scope: [] }],
-      }} as any)
-      .mockResolvedValueOnce({ object: {
+      }), steps: [] } as any)
+      .mockResolvedValueOnce({ text: JSON.stringify({
         tech_decisions: {},
-        tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'f.prisma', description: 'd', depends_on: [] }],
-      }} as any)
-      .mockResolvedValue({ object: { checks: [] }} as any)
+        tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'f.prisma', description: 'd', depends_on: [], feature_ids: [] }],
+      }), steps: [] } as any)
+      .mockResolvedValue({ text: JSON.stringify({ checks: [] }), steps: [] } as any)
 
     const result = await orc.resume('please fix the hook')
     expect(result.state).toBe('done')
@@ -475,25 +473,23 @@ describe('A2UI integration — review HTML written to sandbox', () => {
       keepAlive: vi.fn(async () => {}),
     }
 
-    const aiModule = await import('ai')
+    const aiClient = await import('../lib/ai-client.js')
 
     // PM Agent draft() — returns a draft with a recognisable title
-    vi.mocked(aiModule.generateObject)
-      .mockResolvedValueOnce({ object: {
+    vi.mocked(aiClient.llmText)
+      .mockResolvedValueOnce({ text: JSON.stringify({
         title: 'Simple Todo App',
         description: 'A minimal todo list',
         business_domain: 'productivity',
         constraints: { auth: false, database: false, file_upload: false, email: false, payments: false },
         clarifying_questions: [],
         features: [{ id: 'F001', name: 'Add todo', confidence: 'high', acceptance_criteria: ['User can add a todo'], out_of_scope: [] }],
-      }} as any)
-      // Subsequent calls (planning, validation) — kept minimal so the run can proceed
-      .mockResolvedValue({ object: {
+      }), steps: [] } as any)
+      // Architect + builders + validation (default fallback)
+      .mockResolvedValue({ text: JSON.stringify({
         tech_decisions: {},
-        tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'schema.prisma', description: 'd', depends_on: [] }],
-      }} as any)
-
-    vi.mocked(aiModule.generateText).mockResolvedValue({ text: 'code', steps: [] } as any)
+        tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'schema.prisma', description: 'd', depends_on: [], feature_ids: [] }],
+      }), steps: [] } as any)
   })
 
   it('writes review.html to sandbox and sets reviewUrl in context', async () => {

@@ -7,8 +7,7 @@ import { UIAgent } from './ui-agent.js'
 import { PageAgent } from './page-agent.js'
 import type { PlanTask } from '../../contracts/task-plan.js'
 
-vi.mock('ai', () => ({ generateText: vi.fn(), generateObject: vi.fn() }))
-vi.mock('@ai-sdk/anthropic', () => ({ anthropic: vi.fn(() => 'mock-model') }))
+vi.mock('../../lib/ai-client.js', () => ({ llmText: vi.fn(), anthropic: vi.fn(() => 'mock-model'), MODEL: 'test-model', BUILDER_MODEL: 'test-builder-model' }))
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
