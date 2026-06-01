@@ -21,7 +21,8 @@ export type ProgressEvent =
   | { type: "agent_file_write"; agent: AgentRole; file: string; action?: 'create' | 'modify' }
   | { type: "agent_spawn"; agent: AgentRole; spawnedRole: AgentRole; file: string; taskId: string; parentTaskId: string }
   | { type: "agent_done"; agent: AgentRole; summary: string }
-  | { type: "agent_error"; agent: AgentRole; error: string };
+  | { type: "agent_error"; agent: AgentRole; error: string }
+  | { type: "task_status"; taskId: string; status: "in_progress" | "done" | "failed" };
 
 export type AgentRole =
   | "pm"
