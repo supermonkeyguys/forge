@@ -1,21 +1,28 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useProjects } from '@forge/core'
 import { cn } from '../../lib/utils'
 import { Icons } from '../ui/icons'
+
+function useProjectsWarmup() {
+  useProjects()
+}
 
 interface NavItemProps {
   to: string
   icon: React.ReactNode
   label: string
   exact?: boolean
+  onPrefetch?: () => void
 }
 
-function NavItem({ to, icon, label, exact }: NavItemProps) {
+function NavItem({ to, icon, label, exact, onPrefetch }: NavItemProps) {
   const location = useLocation()
   const isActive = exact ? location.pathname === to : location.pathname.startsWith(to)
   return (
     <NavLink
       to={to}
       title={label}
+      onMouseEnter={onPrefetch}
       className={cn(
         'relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
         isActive
@@ -45,6 +52,7 @@ function BackButton() {
 }
 
 export function AppShell() {
+  useProjectsWarmup()
   const location = useLocation()
   // Show back button when inside a project workspace (/projects/:id)
   const isWorkspace = /^\/projects\/.+/.test(location.pathname)
