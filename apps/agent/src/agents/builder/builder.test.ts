@@ -347,6 +347,29 @@ describe('write path boundary', () => {
       expect.any(String),
     )
   })
+
+  it('logic agent rejects str_replace on packages/ui/', async () => {
+    const { llmText } = await import('../../lib/ai-client.js')
+    const mockLlm = vi.mocked(llmText)
+    // Simulate LLM calling str_replace on a forbidden path
+    mockLlm.mockImplementation(async ({ tools }: any) => {
+      await tools.str_replace.execute({
+        path: 'packages/ui/Button/Button.tsx',
+        old_str: 'export function Button() {}',
+        new_str: 'export function Button({ variant }: any) {}',
+      })
+      return { text: '', steps: [] }
+    })
+
+    const agent = new LogicAgent()
+    const task = baseTask({ agent: 'logic', file: 'packages/ui/Button/Button.tsx', action: 'modify' })
+    await agent.executeTask({ task, projectContext: '' }, emit, mockSandbox as any)
+
+    expect(mockSandbox.writeFile).not.toHaveBeenCalledWith(
+      expect.stringContaining('packages/ui/Button/Button.tsx'),
+      expect.any(String),
+    )
+  })
 })
 
 // ── Cross-agent: all agents have required methods ─────────────────

@@ -84,8 +84,8 @@ function buildTools(
         content: z.string().describe('Complete file content'),
       }),
       execute: async ({ path, content }) => {
-        const guard = WRITE_ALLOWED[role]
-        if (guard && !guard(path)) {
+        const guard = WRITE_ALLOWED[role] ?? (() => false)
+        if (!guard(path)) {
           return { ok: false, error: `write blocked: ${role} agent is not allowed to write to "${path}"` }
         }
         emit({ type: 'agent_tool_use', agent: role, tool: 'write_file', input: { path } })
@@ -103,8 +103,8 @@ function buildTools(
         new_str: z.string().describe('The replacement string'),
       }),
       execute: async ({ path, old_str, new_str }) => {
-        const guard = WRITE_ALLOWED[role]
-        if (guard && !guard(path)) {
+        const guard = WRITE_ALLOWED[role] ?? (() => false)
+        if (!guard(path)) {
           return { ok: false, error: `str_replace blocked: ${role} agent is not allowed to modify "${path}"` }
         }
         emit({ type: 'agent_tool_use', agent: role, tool: 'str_replace', input: { path, old_str: old_str.slice(0, 60) + '...' } })
