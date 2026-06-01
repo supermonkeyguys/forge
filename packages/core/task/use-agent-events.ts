@@ -95,6 +95,7 @@ export function useAgentEvents(projectId: string | null): void {
 
     let emptyRuns = 0
     let nextPollId: ReturnType<typeof setTimeout> | null = null
+    let polling = false
 
     const scheduleNext = () => {
       if (!active) return
@@ -108,6 +109,8 @@ export function useAgentEvents(projectId: string | null): void {
     const poll = async () => {
       if (!active) return
       if (document.hidden) return  // visibilitychange will reschedule when tab is visible
+      if (polling) return
+      polling = true
       try {
         const res = await fetch(`/agent/jobs/project/${projectId}?since=${sinceIndex}`)
         if (!res.ok) return
@@ -202,6 +205,8 @@ export function useAgentEvents(projectId: string | null): void {
         // agent service not running yet — retry next tick
         emptyRuns++
         scheduleNext()
+      } finally {
+        polling = false
       }
     }
 
