@@ -57,7 +57,7 @@ export function KanbanColumn({
             style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const project = projects[virtualRow.index]
+              const project = projects[virtualRow.index]!
               return (
                 <div
                   key={project.id}
