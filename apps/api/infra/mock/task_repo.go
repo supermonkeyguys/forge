@@ -11,8 +11,9 @@ import (
 type TaskRepo struct {
 	CreateFn                func(ctx context.Context, t domain.Task) (domain.Task, error)
 	GetByIDFn               func(ctx context.Context, id string) (domain.Task, error)
-	GetLatestByProjectIDFn  func(ctx context.Context, projectID string) (domain.Task, error)
-	ListByProjectIDFn       func(ctx context.Context, projectID string, limit, offset int) ([]domain.Task, error)
+	GetLatestByProjectIDFn          func(ctx context.Context, projectID string) (domain.Task, error)
+	GetLatestSummaryByProjectIDFn   func(ctx context.Context, projectID string) (domain.Task, error)
+	ListByProjectIDFn               func(ctx context.Context, projectID string, limit, offset int) ([]domain.Task, error)
 	UpdateStatusFn          func(ctx context.Context, id string, status domain.TaskStatus, previewURL, errorMsg string) (domain.Task, error)
 	SaveEventsFn            func(ctx context.Context, id string, eventsJSON string) error
 }
@@ -36,6 +37,13 @@ func (m *TaskRepo) GetLatestByProjectID(ctx context.Context, projectID string) (
 		return domain.Task{}, fmt.Errorf("mock: GetLatestByProjectIDFn not set")
 	}
 	return m.GetLatestByProjectIDFn(ctx, projectID)
+}
+
+func (m *TaskRepo) GetLatestSummaryByProjectID(ctx context.Context, projectID string) (domain.Task, error) {
+	if m.GetLatestSummaryByProjectIDFn == nil {
+		return domain.Task{}, fmt.Errorf("mock: GetLatestSummaryByProjectIDFn not set")
+	}
+	return m.GetLatestSummaryByProjectIDFn(ctx, projectID)
 }
 
 func (m *TaskRepo) ListByProjectID(ctx context.Context, projectID string, limit, offset int) ([]domain.Task, error) {

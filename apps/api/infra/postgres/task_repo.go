@@ -63,6 +63,20 @@ func (r *taskRepo) GetLatestByProjectID(ctx context.Context, projectID string) (
 	return task, err
 }
 
+func (r *taskRepo) GetLatestSummaryByProjectID(ctx context.Context, projectID string) (domain.Task, error) {
+	const q = `
+		SELECT id, project_id, user_id, prompt, status, preview_url, error_msg, created_at, updated_at
+		FROM tasks WHERE project_id = $1
+		ORDER BY created_at DESC LIMIT 1`
+
+	row := r.pool.QueryRow(ctx, q, projectID)
+	task, err := scanTaskSummary(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Task{}, fmt.Errorf("taskRepo.GetLatestSummaryByProjectID: %w", domain.ErrNotFound)
+	}
+	return task, err
+}
+
 func (r *taskRepo) ListByProjectID(ctx context.Context, projectID string, limit, offset int) ([]domain.Task, error) {
 	const q = `
 		SELECT id, project_id, user_id, prompt, status, preview_url, error_msg, events_json, created_at, updated_at
@@ -118,6 +132,24 @@ func scanTask(row interface {
 	err := row.Scan(
 		&t.ID, &t.ProjectID, &t.UserID, &t.Prompt,
 		&status, &t.PreviewURL, &t.ErrorMsg, &t.EventsJSON,
+		&t.CreatedAt, &t.UpdatedAt,
+	)
+	if err != nil {
+		return domain.Task{}, err
+	}
+	t.Status = domain.TaskStatus(status)
+	return t, nil
+}
+
+// scanTaskSummary scans a task row that does NOT include events_json.
+func scanTaskSummary(row interface {
+	Scan(dest ...any) error
+}) (domain.Task, error) {
+	var t domain.Task
+	var status string
+	err := row.Scan(
+		&t.ID, &t.ProjectID, &t.UserID, &t.Prompt,
+		&status, &t.PreviewURL, &t.ErrorMsg,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {

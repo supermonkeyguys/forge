@@ -189,3 +189,82 @@ func TestTaskHandler_Get_Forbidden(t *testing.T) {
 		t.Errorf("expected 403, got %d", w.Code)
 	}
 }
+
+func TestTaskHandler_Latest_ExcludesEventsJson(t *testing.T) {
+	const secret = "test-secret"
+	projectRepo := &mock.ProjectRepo{}
+	taskRepo := &mock.TaskRepo{
+		GetLatestSummaryByProjectIDFn: func(_ context.Context, projectID string) (domain.Task, error) {
+			return domain.Task{
+				ID:         "task-1",
+				ProjectID:  projectID,
+				UserID:     "u1",
+				Status:     domain.TaskStatusDone,
+				PreviewURL: "http://preview.example.com",
+				EventsJSON: "", // summary — never populated
+			}, nil
+		},
+	}
+
+	h := handler.NewTaskHandler(taskRepo, projectRepo, "")
+	r := chi.NewRouter()
+	r.Use(middleware.RequireAuth(secret))
+	r.Get("/projects/{projectID}/tasks/latest", h.Latest)
+
+	req := httptest.NewRequest(http.MethodGet, "/projects/proj-1/tasks/latest", nil)
+	req.Header.Set("Authorization", taskToken("u1", secret))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		Data map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, ok := resp.Data["eventsJson"]; ok {
+		t.Error("eventsJson must be absent from lean Latest response")
+	}
+}
+
+func TestTaskHandler_LatestEvents_IncludesEventsJson(t *testing.T) {
+	const secret = "test-secret"
+	projectRepo := &mock.ProjectRepo{}
+	taskRepo := &mock.TaskRepo{
+		GetLatestByProjectIDFn: func(_ context.Context, projectID string) (domain.Task, error) {
+			return domain.Task{
+				ID:         "task-1",
+				ProjectID:  projectID,
+				UserID:     "u1",
+				Status:     domain.TaskStatusDone,
+				EventsJSON: `[{"type":"agent_start"}]`,
+			}, nil
+		},
+	}
+
+	h := handler.NewTaskHandler(taskRepo, projectRepo, "")
+	r := chi.NewRouter()
+	r.Use(middleware.RequireAuth(secret))
+	r.Get("/projects/{projectID}/tasks/latest/events", h.LatestEvents)
+
+	req := httptest.NewRequest(http.MethodGet, "/projects/proj-1/tasks/latest/events", nil)
+	req.Header.Set("Authorization", taskToken("u1", secret))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		Data map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.Data["eventsJson"] == nil {
+		t.Error("eventsJson must be present in LatestEvents response")
+	}
+}

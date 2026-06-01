@@ -124,14 +124,36 @@ func (h *TaskHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /api/v1/projects/{projectID}/tasks/latest
-// Returns the most recent task for a project, or null if none exists.
+// Returns the most recent task summary (no eventsJson) for a project, or null if none.
 func (h *TaskHandler) Latest(w http.ResponseWriter, r *http.Request) {
+	projectID := chi.URLParam(r, "projectID")
+	userID := middleware.UserIDFromContext(r.Context())
+
+	task, err := h.taskRepo.GetLatestSummaryByProjectID(r.Context(), projectID)
+	if errors.Is(err, domain.ErrNotFound) {
+		middleware.WriteJSON(w, http.StatusOK, nil)
+		return
+	}
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	if task.UserID != userID {
+		middleware.WriteError(w, domain.ErrForbidden)
+		return
+	}
+
+	middleware.WriteJSON(w, http.StatusOK, task)
+}
+
+// GET /api/v1/projects/{projectID}/tasks/latest/events
+// Returns the most recent task including full eventsJson. Only call when restoring event history.
+func (h *TaskHandler) LatestEvents(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
 	userID := middleware.UserIDFromContext(r.Context())
 
 	task, err := h.taskRepo.GetLatestByProjectID(r.Context(), projectID)
 	if errors.Is(err, domain.ErrNotFound) {
-		// No task yet — return 200 with null so clients don't see a noisy 404
 		middleware.WriteJSON(w, http.StatusOK, nil)
 		return
 	}

@@ -78,6 +78,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 					r.Get("/", deps.Task.List)
 					r.Post("/", deps.Task.Create)
 					r.Get("/latest", deps.Task.Latest)
+					r.Get("/latest/events", deps.Task.LatestEvents)
 					r.Get("/{taskID}", deps.Task.Get)
 				})
 			})
