@@ -400,12 +400,30 @@ export class Orchestrator {
 
   private async executeBatches(batches: PlanTask[][]): Promise<void> {
     for (const batch of batches) {
-      // Generate code for all tasks in the batch in parallel (LLM calls are independent)
-      const codes = await Promise.all(batch.map((task) => this.generateTaskCode(task)))
-      // Write files + update context sequentially to avoid race conditions on project_context.md
-      for (let i = 0; i < batch.length; i++) {
-        await this.commitTask(batch[i]!, codes[i]!)
+      for (const task of batch) {
+        task.status = 'in_progress'
+        this.emit({ type: 'task_status', taskId: task.id, status: 'in_progress' })
       }
+
+      const codes = await Promise.all(batch.map((task) => this.generateTaskCode(task)))
+
+      for (let i = 0; i < batch.length; i++) {
+        const task = batch[i]!
+        try {
+          await this.commitTask(task, codes[i]!)
+          task.status = 'done'
+          this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
+        } catch (err) {
+          task.status = 'failed'
+          this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
+          throw err
+        }
+      }
+
+      await this.writeSandboxFile(
+        'contracts/task_plan.json',
+        JSON.stringify(this.plan, null, 2),
+      )
     }
   }
 
@@ -415,11 +433,32 @@ export class Orchestrator {
         ? this.plan!.tasks.filter((t) => instruction.taskIds.includes(t.id))
         : this.plan!.tasks.filter((t) => t.agent === instruction.agent)
 
-      // Generate in parallel, commit sequentially (same pattern as executeBatches)
-      const codes = await Promise.all(tasks.map((task) => this.generateTaskCode(task, instruction.errorContext)))
-      for (let i = 0; i < tasks.length; i++) {
-        await this.commitTask(tasks[i]!, codes[i]!)
+      for (const task of tasks) {
+        task.status = 'in_progress'
+        this.emit({ type: 'task_status', taskId: task.id, status: 'in_progress' })
       }
+
+      const codes = await Promise.all(
+        tasks.map((task) => this.generateTaskCode(task, instruction.errorContext)),
+      )
+
+      for (let i = 0; i < tasks.length; i++) {
+        const task = tasks[i]!
+        try {
+          await this.commitTask(task, codes[i]!)
+          task.status = 'done'
+          this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
+        } catch (err) {
+          task.status = 'failed'
+          this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
+          throw err
+        }
+      }
+
+      await this.writeSandboxFile(
+        'contracts/task_plan.json',
+        JSON.stringify(this.plan, null, 2),
+      )
     }
   }
 

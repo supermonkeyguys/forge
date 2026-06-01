@@ -15,6 +15,7 @@ import type { SandboxInterface } from './orchestrator.js'
 import type { ValidationError } from '../contracts/validation-report.js'
 import type { TaskPlan, PlanTask } from '../contracts/task-plan.js'
 import type { DraftSpec } from '../agents/pm-agent.js'
+import type { ProgressEvent } from '../agents/types.js'
 
 // ── Mock all agent LLM calls via ai-client (single mock point) ────
 // All agents import llmText from '../lib/ai-client.js', not directly from 'ai'.
@@ -336,6 +337,30 @@ describe('Orchestrator — happy path', () => {
     await orc.run()
     // Each state is announced
     expect(transitions.length).toBeGreaterThanOrEqual(5)
+  })
+
+  it('emits task_status in_progress then done for each task', async () => {
+    const events: ProgressEvent[] = []
+    const orc = new Orchestrator('proj-1', 'build an expense manager', {
+      sandbox: mockSandbox,
+      onStateChange: async () => {},
+      onDraftReady: async (draft) => draft,
+      onEvent: (e) => events.push(e),
+    })
+
+    await orc.run()
+
+    const statusEvents = events.filter(e => e.type === 'task_status')
+    const inProgress = statusEvents.filter(e => e.type === 'task_status' && e.status === 'in_progress')
+    const done = statusEvents.filter(e => e.type === 'task_status' && e.status === 'done')
+
+    expect(inProgress.length).toBeGreaterThan(0)
+    expect(done.length).toBeGreaterThan(0)
+    const inProgressIds = new Set(inProgress.map(e => e.type === 'task_status' ? e.taskId : ''))
+    const doneIds = new Set(done.map(e => e.type === 'task_status' ? e.taskId : ''))
+    for (const id of inProgressIds) {
+      expect(doneIds.has(id)).toBe(true)
+    }
   })
 })
 
