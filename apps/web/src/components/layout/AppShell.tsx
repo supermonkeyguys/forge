@@ -57,6 +57,9 @@ export function AppShell() {
   // Show back button when inside a project workspace (/projects/:id)
   const isWorkspace = /^\/projects\/.+/.test(location.pathname)
 
+  const prefetchProjects = () => import('../../pages/projects')
+  const prefetchSettings = () => import('../../pages/settings')
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Fixed 52px global sidebar */}
@@ -71,13 +74,24 @@ export function AppShell() {
             <div className="my-0.5 h-px w-7 bg-white/[0.06]" />
           </>
         ) : (
-          <NavItem to="/projects" exact icon={<Icons.LayoutGrid className="h-[17px] w-[17px]" />} label="项目" />
+          <NavItem
+            to="/projects"
+            exact
+            icon={<Icons.LayoutGrid className="h-[17px] w-[17px]" />}
+            label="项目"
+            onPrefetch={prefetchProjects}
+          />
         )}
 
         <NavItem to="/conversations" icon={<Icons.MessageSquare className="h-[17px] w-[17px]" />} label="对话" />
         <div className="flex-1" />
         <div className="mb-1 h-px w-7 bg-white/[0.06]" />
-        <NavItem to="/settings" icon={<Icons.Cog className="h-[17px] w-[17px]" />} label="设置" />
+        <NavItem
+          to="/settings"
+          icon={<Icons.Cog className="h-[17px] w-[17px]" />}
+          label="设置"
+          onPrefetch={prefetchSettings}
+        />
       </nav>
 
       {/* Page content */}
