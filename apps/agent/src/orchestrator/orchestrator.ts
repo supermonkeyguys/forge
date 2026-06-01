@@ -407,23 +407,25 @@ export class Orchestrator {
 
       const codes = await Promise.all(batch.map((task) => this.generateTaskCode(task)))
 
-      for (let i = 0; i < batch.length; i++) {
-        const task = batch[i]!
-        try {
-          await this.commitTask(task, codes[i]!)
-          task.status = 'done'
-          this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
-        } catch (err) {
-          task.status = 'failed'
-          this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
-          throw err
+      try {
+        for (let i = 0; i < batch.length; i++) {
+          const task = batch[i]!
+          try {
+            await this.commitTask(task, codes[i]!)
+            task.status = 'done'
+            this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
+          } catch (err) {
+            task.status = 'failed'
+            this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
+            throw err
+          }
         }
+      } finally {
+        await this.writeSandboxFile(
+          'contracts/task_plan.json',
+          JSON.stringify(this.plan, null, 2),
+        )
       }
-
-      await this.writeSandboxFile(
-        'contracts/task_plan.json',
-        JSON.stringify(this.plan, null, 2),
-      )
     }
   }
 
@@ -442,23 +444,25 @@ export class Orchestrator {
         tasks.map((task) => this.generateTaskCode(task, instruction.errorContext)),
       )
 
-      for (let i = 0; i < tasks.length; i++) {
-        const task = tasks[i]!
-        try {
-          await this.commitTask(task, codes[i]!)
-          task.status = 'done'
-          this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
-        } catch (err) {
-          task.status = 'failed'
-          this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
-          throw err
+      try {
+        for (let i = 0; i < tasks.length; i++) {
+          const task = tasks[i]!
+          try {
+            await this.commitTask(task, codes[i]!)
+            task.status = 'done'
+            this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
+          } catch (err) {
+            task.status = 'failed'
+            this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
+            throw err
+          }
         }
+      } finally {
+        await this.writeSandboxFile(
+          'contracts/task_plan.json',
+          JSON.stringify(this.plan, null, 2),
+        )
       }
-
-      await this.writeSandboxFile(
-        'contracts/task_plan.json',
-        JSON.stringify(this.plan, null, 2),
-      )
     }
   }
 

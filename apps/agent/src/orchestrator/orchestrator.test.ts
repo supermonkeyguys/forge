@@ -548,3 +548,73 @@ describe('A2UI integration — review HTML written to sandbox', () => {
     expect(capturedReviewUrl).toBe('http://localhost:3001/review/proj-test')
   })
 })
+
+// ── Orchestrator — failed task path ──────────────────────────────
+
+describe('Orchestrator — commitTask failure', () => {
+  it('emits task_status failed and re-throws when sandbox writeFile rejects for a task file', async () => {
+    vi.resetAllMocks()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '<html>ok</html>' }))
+
+    const aiClient = await import('../lib/ai-client.js')
+
+    // PM + Architect return minimal valid responses; builder returns code
+    vi.mocked(aiClient.llmText)
+      .mockResolvedValueOnce({ text: JSON.stringify({
+        title: 'Fail Test App',
+        description: 'Test',
+        business_domain: 'test',
+        constraints: { auth: false, database: false, file_upload: false, email: false, payments: false },
+        clarifying_questions: [],
+        features: [{ id: 'F001', name: 'F', confidence: 'high', acceptance_criteria: ['x'], out_of_scope: [] }],
+      }), steps: [] } as any)
+      .mockResolvedValueOnce({ text: JSON.stringify({
+        tech_decisions: {},
+        tasks: [{ id: 'T001', agent: 'schema', action: 'create', file: 'prisma/schema.prisma', description: 'd', depends_on: [], feature_ids: [] }],
+      }), steps: [] } as any)
+      .mockResolvedValue({ text: 'model User {}', steps: [] } as any)
+
+    const writtenPaths: string[] = []
+    // Track how many times project_context.md has been written.
+    // The planning phase writes it once (seed); commitTask writes it again per task.
+    // We throw on the second write so commitTask fails while the seed write succeeds.
+    let projectContextWriteCount = 0
+
+    const failingSandbox: SandboxInterface = {
+      writeFile: vi.fn(async (path: string, _content: string) => {
+        writtenPaths.push(path)
+        if (path === 'contracts/project_context.md') {
+          projectContextWriteCount++
+          if (projectContextWriteCount >= 2) {
+            throw new Error('sandbox disk full')
+          }
+        }
+      }),
+      readFile: vi.fn(async () => ''),
+      run: vi.fn(async () => ({ stdout: '', stderr: '', exitCode: 0 })),
+      startBackground: vi.fn(async () => {}),
+      getPreviewUrl: vi.fn(() => 'https://fail-test.e2b.app'),
+    }
+
+    const events: ProgressEvent[] = []
+    const orc = new Orchestrator('proj-fail', 'build fail test', {
+      sandbox: failingSandbox,
+      onStateChange: async () => {},
+      onDraftReady: async (draft) => draft,
+      onEvent: (e) => events.push(e),
+    })
+
+    // run() must reject — the orchestrator must not swallow the error
+    await expect(orc.run()).rejects.toThrow('sandbox disk full')
+
+    // A task_status 'failed' event must have been emitted for T001
+    const failedEvents = events.filter(
+      (e) => e.type === 'task_status' && e.status === 'failed',
+    )
+    expect(failedEvents.length).toBeGreaterThan(0)
+    expect(failedEvents[0]).toMatchObject({ type: 'task_status', taskId: 'T001', status: 'failed' })
+
+    // task_plan.json must still have been written despite the failure (finally block)
+    expect(writtenPaths).toContain('contracts/task_plan.json')
+  })
+})
