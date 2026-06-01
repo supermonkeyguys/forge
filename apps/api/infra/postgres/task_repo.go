@@ -46,7 +46,10 @@ func (r *taskRepo) GetByID(ctx context.Context, id string) (domain.Task, error) 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Task{}, fmt.Errorf("taskRepo.GetByID: %w", domain.ErrNotFound)
 	}
-	return task, err
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("taskRepo.GetByID: %w", err)
+	}
+	return task, nil
 }
 
 func (r *taskRepo) GetLatestByProjectID(ctx context.Context, projectID string) (domain.Task, error) {
