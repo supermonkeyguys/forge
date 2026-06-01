@@ -16,6 +16,7 @@ export default defineConfig({
           'vendor-router': ['react-router-dom'],
           'vendor-query': ['@tanstack/react-query'],
           'vendor-icons': ['lucide-react'],
+          'vendor-ui': ['@radix-ui/react-checkbox', '@radix-ui/react-scroll-area', '@radix-ui/react-separator'],
         },
       },
     },
