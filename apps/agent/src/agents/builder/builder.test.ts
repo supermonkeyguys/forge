@@ -291,6 +291,64 @@ describe('PageAgent', () => {
   })
 })
 
+// ── Write path boundaries ─────────────────────────────────────────
+
+describe('write path boundary', () => {
+  let mockSandbox: {
+    readFile: ReturnType<typeof vi.fn>
+    writeFile: ReturnType<typeof vi.fn>
+    run: ReturnType<typeof vi.fn>
+  }
+  const emit = vi.fn()
+
+  beforeEach(() => {
+    mockSandbox = {
+      readFile: vi.fn().mockResolvedValue(''),
+      writeFile: vi.fn().mockResolvedValue(undefined),
+      run: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }),
+    }
+    emit.mockReset()
+  })
+
+  it('logic agent rejects writing to packages/ui/', async () => {
+    const { llmText } = await import('../../lib/ai-client.js')
+    const mockLlm = vi.mocked(llmText)
+    // Simulate LLM calling write_file on a forbidden path
+    mockLlm.mockImplementation(async ({ tools }: any) => {
+      await tools.write_file.execute({ path: 'packages/ui/Button/Button.tsx', content: 'export function Button() {}' })
+      return { text: '', steps: [] }
+    })
+
+    const agent = new LogicAgent()
+    const task = baseTask({ agent: 'logic', file: 'packages/ui/Button/Button.tsx', action: 'create' })
+    await agent.executeTask({ task, projectContext: '' }, emit, mockSandbox as any)
+
+    expect(mockSandbox.writeFile).not.toHaveBeenCalledWith(
+      expect.stringContaining('packages/ui/Button/Button.tsx'),
+      expect.any(String),
+    )
+  })
+
+  it('logic agent allows writing to packages/core/', async () => {
+    const { llmText } = await import('../../lib/ai-client.js')
+    const mockLlm = vi.mocked(llmText)
+    // Simulate LLM calling write_file on an allowed path
+    mockLlm.mockImplementation(async ({ tools }: any) => {
+      await tools.write_file.execute({ path: 'packages/core/auth/use-login.ts', content: 'export function useLogin() {}' })
+      return { text: '', steps: [] }
+    })
+
+    const agent = new LogicAgent()
+    const task = baseTask({ agent: 'logic', file: 'packages/core/auth/use-login.ts', action: 'create' })
+    await agent.executeTask({ task, projectContext: '' }, emit, mockSandbox as any)
+
+    expect(mockSandbox.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining('packages/core/auth/use-login.ts'),
+      expect.any(String),
+    )
+  })
+})
+
 // ── Cross-agent: all agents have required methods ─────────────────
 
 describe('All Builder Agents interface compliance', () => {
