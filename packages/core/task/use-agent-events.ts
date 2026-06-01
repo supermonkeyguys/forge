@@ -1,63 +1,194 @@
 /**
- * useAgentEvents — subscribes to SSE stream from Go API.
- * Returns a live list of AgentEvent as the generation progresses.
+ * useAgentEvents — subscribes to two data sources for the workspace.
+ *
+ * Source 1: Go API SSE (/api/v1/projects/:id/stream)
+ *   - Only used for the terminal `done` event with previewUrl.
+ *   - Token passed as query param (EventSource does not support custom headers).
+ *
+ * Source 2: Agent service polling (/agent/jobs/project/:id)
+ *   - Rich event stream: agent_start / agent_thinking / agent_file_write / etc.
+ *   - Detects PM draft ready → triggers pm-review phase.
+ *   - Falls back to persisted events from Go API DB when no live job is found.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAuthStore, selectToken } from '../auth/auth-store.ts'
+import { useWorkspaceStore } from './workspace-store.ts'
+import type { DraftSpec, DraftFeature } from './workspace-store.ts'
 import type { AgentEvent, ProjectStatus } from '../types/index.ts'
 
-interface UseAgentEventsResult {
-  events: AgentEvent[]
-  status: ProjectStatus
-  previewUrl: string | null
-  isConnected: boolean
+const TERMINAL_STATUSES = new Set(['done', 'aborted', 'failed'])
+
+// Map agent service job.status → ProjectStatus for the OrchestratorBar
+const STATUS_MAP: Record<string, ProjectStatus> = {
+  analyzing:  'analyzing',
+  planning:   'planning',
+  building:   'building',
+  validating: 'validating',
+  fixing:     'fixing',
+  waiting:    'waiting',
+  done:       'done',
+  aborted:    'failed',
 }
 
-export function useAgentEvents(projectId: string | null): UseAgentEventsResult {
+export function useAgentEvents(projectId: string | null): void {
   const token = useAuthStore(selectToken)
-  const [events, setEvents] = useState<AgentEvent[]>([])
-  const [status, setStatus] = useState<ProjectStatus>('idle')
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
-  const esRef = useRef<EventSource | null>(null)
+  const addEvent = useWorkspaceStore((s) => s.addEvent)
+  const setPreviewUrl = useWorkspaceStore((s) => s.setPreviewUrl)
+  const setWaiting = useWorkspaceStore((s) => s.setWaiting)
+  const setDraftSpec = useWorkspaceStore((s) => s.setDraftSpec)
+  const setAgentJobId = useWorkspaceStore((s) => s.setAgentJobId)
+  const setPhase = useWorkspaceStore((s) => s.setPhase)
+  const setOrchestratorState = useWorkspaceStore((s) => s.setOrchestratorState)
+  const phase = useWorkspaceStore((s) => s.phase)
+  const phaseRef = useRef(phase)
+  phaseRef.current = phase
 
+  // ── Go API SSE — done event ───────────────────────────────────────
   useEffect(() => {
     if (!projectId || !token) return
 
-    const url = `/api/v1/projects/${projectId}/stream?token=${token}`
+    const url = `/api/v1/projects/${projectId}/stream?token=${encodeURIComponent(token)}`
     const es = new EventSource(url)
-    esRef.current = es
-
-    es.onopen = () => setIsConnected(true)
-
-    es.addEventListener('agent_event', (e: MessageEvent) => {
-      const event = JSON.parse(e.data) as AgentEvent
-      setEvents((prev) => [...prev, event])
-
-      if (event.type === 'state_change' && event.state) {
-        setStatus(event.state)
-      }
-    })
 
     es.addEventListener('done', (e: MessageEvent) => {
-      const data = JSON.parse(e.data) as { previewUrl: string }
-      setPreviewUrl(data.previewUrl)
-      setStatus('done')
+      try {
+        const data = JSON.parse(e.data) as { previewUrl: string }
+        if (data.previewUrl) setPreviewUrl(data.previewUrl)
+      } catch { /* ignore malformed event */ }
       es.close()
-      setIsConnected(false)
     })
 
-    es.onerror = () => {
-      setIsConnected(false)
-      es.close()
+    es.onerror = () => {}
+
+    return () => es.close()
+  }, [projectId, token, setPreviewUrl])
+
+  // ── Agent service polling — rich events + draft detection ─────────
+  useEffect(() => {
+    if (!projectId) return
+
+    let sinceIndex = 0
+    let active = true
+    let draftShown = false
+    let restoredFromDB = false
+
+    // Fallback: load persisted events from Go API when agent service has no live job
+    const restoreFromDB = async () => {
+      if (!token) return
+      try {
+        const res = await fetch(`/api/v1/projects/${projectId}/tasks/latest/events`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) return
+        const { data: task } = await res.json() as {
+          data: { status: string; previewUrl: string; eventsJson: string } | null
+        }
+        if (!task?.eventsJson || task.eventsJson === '[]') return
+        const events: AgentEvent[] = JSON.parse(task.eventsJson)
+        for (const event of events) addEvent(event)
+        const mapped = STATUS_MAP[task.status]
+        if (mapped) setOrchestratorState(mapped)
+        if (task.status === 'done' && task.previewUrl) setPreviewUrl(task.previewUrl)
+      } catch { /* DB fallback unavailable, ignore */ }
     }
+
+    const poll = async () => {
+      if (!active) return
+      try {
+        const res = await fetch(`/agent/jobs/project/${projectId}?since=${sinceIndex}`)
+        if (!res.ok) return
+
+        const body = await res.json() as {
+          data: {
+            id: string
+            status: string
+            previewUrl: string | null
+            waitingReason: string | null
+            draft: Record<string, unknown> | null
+            events: AgentEvent[]
+            totalEvents: number
+          }
+        }
+        const job = body.data
+        if (!job) {
+          // No live job — attempt one-time restore from DB
+          if (!restoredFromDB) {
+            restoredFromDB = true
+            await restoreFromDB()
+          }
+          return
+        }
+
+        // Store job ID on first contact
+        if (sinceIndex === 0) setAgentJobId(job.id)
+
+        sinceIndex = job.totalEvents
+
+        for (const event of job.events) {
+          addEvent(event)
+        }
+
+        // Sync orchestrator state for the OrchestratorBar
+        const mappedStatus = STATUS_MAP[job.status]
+        if (mappedStatus) setOrchestratorState(mappedStatus)
+
+        // PM draft detected — show review UI
+        if (job.draft && !draftShown && phaseRef.current !== 'pm-review') {
+          draftShown = true
+          const draft = job.draft as Record<string, unknown>
+          setDraftSpec({
+            title: String(draft.title ?? ''),
+            description: String(draft.description ?? ''),
+            business_domain: String(draft.business_domain ?? ''),
+            constraints: (draft.constraints ?? {}) as DraftSpec['constraints'],
+            clarifying_questions: (draft.clarifying_questions as string[]) ?? [],
+            features: ((draft.features as unknown[]) ?? []).map((f) => {
+              const feat = f as Record<string, unknown>
+              return {
+                id: String(feat.id ?? ''),
+                name: String(feat.name ?? ''),
+                confidence: (feat.confidence ?? 'medium') as DraftFeature['confidence'],
+                acceptance_criteria: (feat.acceptance_criteria as string[]) ?? [],
+                out_of_scope: (feat.out_of_scope as string[]) ?? [],
+                selected: typeof feat.selected === 'boolean' ? feat.selected : true,
+              }
+            }),
+          })
+          setPhase('pm-review')
+        }
+
+        // Draft was confirmed — go back to running to show agent cards
+        if (!job.draft && draftShown) {
+          draftShown = false
+          if (phaseRef.current === 'pm-review') {
+            setPhase('running')
+          }
+        }
+
+        if (job.status === 'done' && job.previewUrl) {
+          setPreviewUrl(job.previewUrl)
+        }
+        if (job.status === 'waiting' && job.waitingReason) {
+          setWaiting(job.waitingReason)
+        }
+
+        if (TERMINAL_STATUSES.has(job.status)) {
+          active = false
+        }
+      } catch {
+        // agent service not running yet — retry next tick
+      }
+    }
+
+    void poll()
+    const interval = setInterval(poll, 1000)
 
     return () => {
-      es.close()
-      esRef.current = null
+      active = false
+      clearInterval(interval)
     }
-  }, [projectId, token])
-
-  return { events, status, previewUrl, isConnected }
+  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
 }
+
+
