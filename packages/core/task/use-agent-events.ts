@@ -93,8 +93,21 @@ export function useAgentEvents(projectId: string | null): void {
       } catch { /* DB fallback unavailable, ignore */ }
     }
 
+    let emptyRuns = 0
+    let nextPollId: ReturnType<typeof setTimeout> | null = null
+
+    const scheduleNext = () => {
+      if (!active) return
+      // Backoff: increase delay after every 3 empty polls, up to 15s max
+      const delay = emptyRuns === 0
+        ? 1_000
+        : Math.min(1_000 * Math.pow(1.5, Math.floor(emptyRuns / 3)), 15_000)
+      nextPollId = setTimeout(() => { void poll() }, delay)
+    }
+
     const poll = async () => {
       if (!active) return
+      if (document.hidden) return  // visibilitychange will reschedule when tab is visible
       try {
         const res = await fetch(`/agent/jobs/project/${projectId}?since=${sinceIndex}`)
         if (!res.ok) return
@@ -127,6 +140,13 @@ export function useAgentEvents(projectId: string | null): void {
 
         for (const event of job.events) {
           addEvent(event)
+        }
+
+        // Track empty runs for backoff
+        if (job.events.length === 0) {
+          emptyRuns++
+        } else {
+          emptyRuns = 0
         }
 
         // Sync orchestrator state for the OrchestratorBar
@@ -175,18 +195,31 @@ export function useAgentEvents(projectId: string | null): void {
 
         if (TERMINAL_STATUSES.has(job.status)) {
           active = false
+        } else {
+          scheduleNext()
         }
       } catch {
         // agent service not running yet — retry next tick
+        emptyRuns++
+        scheduleNext()
       }
     }
 
     void poll()
-    const interval = setInterval(poll, 1000)
+
+    // Resume polling immediately when tab becomes visible
+    const handleVisible = () => {
+      if (!document.hidden && active) {
+        if (nextPollId !== null) clearTimeout(nextPollId)
+        void poll()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisible)
 
     return () => {
       active = false
-      clearInterval(interval)
+      if (nextPollId !== null) clearTimeout(nextPollId)
+      document.removeEventListener('visibilitychange', handleVisible)
     }
   }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
 }
