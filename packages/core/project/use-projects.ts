@@ -37,6 +37,7 @@ export function useProjects() {
       })
     },
     enabled: token !== null,
+    staleTime: 60_000, // projects change infrequently; reduce background refetches
   })
 }
 
