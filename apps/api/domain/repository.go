@@ -37,3 +37,11 @@ type SettingsRepository interface {
 	Upsert(ctx context.Context, userID, baseURL, encryptedKey string) error
 	DeleteAPIKey(ctx context.Context, userID string) error
 }
+
+type AgentRepository interface {
+	Create(ctx context.Context, a Agent) (Agent, error)
+	GetByID(ctx context.Context, id string) (Agent, error)
+	ListByUserID(ctx context.Context, userID string) ([]Agent, error)
+	Update(ctx context.Context, a Agent) (Agent, error)
+	Delete(ctx context.Context, id, userID string) error
+}
