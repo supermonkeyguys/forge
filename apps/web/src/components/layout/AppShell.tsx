@@ -58,6 +58,7 @@ export function AppShell() {
   const isWorkspace = /^\/projects\/.+/.test(location.pathname)
 
   const prefetchProjects = () => import('../../pages/projects')
+  const prefetchAgents = () => import('../../pages/agents')
   const prefetchSettings = () => import('../../pages/settings')
 
   return (
@@ -84,6 +85,12 @@ export function AppShell() {
         )}
 
         <NavItem to="/conversations" icon={<Icons.MessageSquare className="h-[17px] w-[17px]" />} label="对话" />
+        <NavItem
+          to="/agents"
+          icon={<Icons.Bot className="h-[17px] w-[17px]" />}
+          label="Agents"
+          onPrefetch={prefetchAgents}
+        />
         <div className="flex-1" />
         <div className="mb-1 h-px w-7 bg-white/[0.06]" />
         <NavItem
