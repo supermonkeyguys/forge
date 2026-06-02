@@ -59,6 +59,7 @@ function buildTools(
   spawnFn?: SpawnTaskFn,
   currentTaskId?: string,
   currentDepth?: number,
+  customWriteGuard?: (path: string) => boolean,
 ) {
   return {
     read_file: tool({
@@ -84,7 +85,7 @@ function buildTools(
         content: z.string().describe('Complete file content'),
       }),
       execute: async ({ path, content }) => {
-        const guard = WRITE_ALLOWED[role] ?? (() => false)
+        const guard = customWriteGuard ?? WRITE_ALLOWED[role] ?? (() => false)
         if (!guard(path)) {
           return { ok: false, error: `write blocked: ${role} agent is not allowed to write to "${path}"` }
         }
@@ -103,7 +104,7 @@ function buildTools(
         new_str: z.string().describe('The replacement string'),
       }),
       execute: async ({ path, old_str, new_str }) => {
-        const guard = WRITE_ALLOWED[role] ?? (() => false)
+        const guard = customWriteGuard ?? WRITE_ALLOWED[role] ?? (() => false)
         if (!guard(path)) {
           return { ok: false, error: `str_replace blocked: ${role} agent is not allowed to modify "${path}"` }
         }
@@ -189,6 +190,11 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
    */
   protected abstract contextUpdate(task: PlanTask, code: string): string | null
 
+  /** Override in subclasses to replace the WRITE_ALLOWED role-based guard. */
+  protected writeGuard(): ((path: string) => boolean) | undefined {
+    return undefined
+  }
+
   // ── Public API ────────────────────────────────────────────────
 
   async run(ctx: AgentRunContext): Promise<AgentResult> {
@@ -255,6 +261,7 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
       spawnFn,
       input.task.id,
       input.task.depth ?? 0,
+      this.writeGuard(),
     )
 
     const { text, steps } = await generateText({

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { extractCode } from './base-builder.js'
+import { CustomBuilderAgent } from './custom-agent.js'
 import { SchemaAgent } from './schema-agent.js'
 import { LogicAgent } from './logic-agent.js'
 import { ApiAgent } from './api-agent.js'
@@ -369,6 +370,86 @@ describe('write path boundary', () => {
       expect.stringContaining('packages/ui/Button/Button.tsx'),
       expect.any(String),
     )
+  })
+})
+
+// ── Shared mock sandbox helper ────────────────────────────────────
+
+function makeMockSandbox() {
+  return {
+    readFile: vi.fn().mockResolvedValue(''),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    run: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }),
+  }
+}
+
+// ── CustomBuilderAgent ────────────────────────────────────────────
+
+describe('CustomBuilderAgent', () => {
+  it('uses custom instructions as system prompt', () => {
+    const agent = new CustomBuilderAgent('logic', {
+      instructions: 'You are a custom agent.',
+      tools: ['read_file'],
+      writePaths: ['docs/'],
+    })
+    // @ts-expect-error accessing protected
+    expect(agent.systemPrompt()).toBe('You are a custom agent.')
+  })
+
+  it('blocks write outside custom writePaths via the guard', async () => {
+    const { llmText } = await import('../../lib/ai-client.js')
+    const mockLlm = vi.mocked(llmText)
+    mockLlm.mockImplementation(async ({ tools }: any) => {
+      await tools.write_file.execute({ path: 'packages/core/hook.ts', content: 'export function hook() {}' })
+      return { text: '', steps: [] }
+    })
+
+    const sandbox = makeMockSandbox()
+    const writes: string[] = []
+    sandbox.writeFile = async (path: string, _content: string) => { writes.push(path) }
+
+    const agent = new CustomBuilderAgent('logic', {
+      instructions: 'You are a custom agent.',
+      tools: ['write_file'],
+      writePaths: ['docs/'],
+    })
+    await agent.executeTask(
+      {
+        task: { id: 'T1', agent: 'logic', action: 'create', file: 'packages/core/hook.ts', description: 'test', depends_on: [], status: 'pending', depth: 0 },
+        projectContext: '',
+      },
+      () => {},
+      sandbox,
+    )
+    expect(writes.some(p => p.includes('packages/core/'))).toBe(false)
+  })
+
+  it('allows write inside custom writePaths', async () => {
+    const { llmText } = await import('../../lib/ai-client.js')
+    const mockLlm = vi.mocked(llmText)
+    mockLlm.mockImplementation(async ({ tools }: any) => {
+      await tools.write_file.execute({ path: 'docs/README.md', content: '# Docs' })
+      return { text: '', steps: [] }
+    })
+
+    const sandbox = makeMockSandbox()
+    const writes: string[] = []
+    sandbox.writeFile = async (path: string, _content: string) => { writes.push(path) }
+
+    const agent = new CustomBuilderAgent('logic', {
+      instructions: 'You are a custom agent.',
+      tools: ['write_file'],
+      writePaths: ['docs/'],
+    })
+    await agent.executeTask(
+      {
+        task: { id: 'T1', agent: 'logic', action: 'create', file: 'docs/README.md', description: 'test', depends_on: [], status: 'pending', depth: 0 },
+        projectContext: '',
+      },
+      () => {},
+      sandbox,
+    )
+    expect(writes.some(p => p.includes('docs/'))).toBe(true)
   })
 })
 
