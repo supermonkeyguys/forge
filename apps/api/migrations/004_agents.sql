@@ -1,4 +1,4 @@
-CREATE TABLE agents (
+CREATE TABLE IF NOT EXISTS agents (
   id           TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
   user_id      TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name         TEXT        NOT NULL,
