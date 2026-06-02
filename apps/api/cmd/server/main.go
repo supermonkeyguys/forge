@@ -42,6 +42,7 @@ func main() {
 	userRepo := postgres.NewUserRepo(pool)
 	taskRepo := postgres.NewTaskRepo(pool)
 	settingsRepo := postgres.NewSettingsRepo(pool)
+	agentRepo := postgres.NewAgentRepo(pool)
 
 	// 3. Build handlers (receive domain interfaces)
 	hasher := handler.BcryptHasher{}
@@ -49,8 +50,9 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepo)
 	taskHandler := handler.NewTaskHandler(taskRepo, projectRepo, cfg.AgentServiceURL)
 	healthHandler := handler.NewHealthHandler(pool)
-	internalHandler := handler.NewInternalHandler(taskRepo)
+	internalHandler := handler.NewInternalHandler(taskRepo, agentRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsRepo, cfg.SettingsEncryptionKey)
+	agentHandler := handler.NewAgentHandler(agentRepo)
 
 	// 4. Assemble router
 	router := apiPkg.NewRouter(apiPkg.RouterDeps{
@@ -60,6 +62,7 @@ func main() {
 		Health:        healthHandler,
 		Internal:      internalHandler,
 		Settings:      settingsHandler,
+		Agent:         agentHandler,
 		InternalToken: cfg.InternalToken,
 		JWTSecret:     cfg.JWTSecret,
 		Logger:        logger,

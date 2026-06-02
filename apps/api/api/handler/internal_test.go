@@ -35,7 +35,7 @@ func TestInternalHandler_UpdateTaskStatus_Success(t *testing.T) {
 		},
 	}
 
-	h := handler.NewInternalHandler(taskRepo)
+	h := handler.NewInternalHandler(taskRepo, nil)
 	body, _ := json.Marshal(map[string]string{"status": "building"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -55,7 +55,7 @@ func TestInternalHandler_UpdateTaskStatus_Success(t *testing.T) {
 }
 
 func TestInternalHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
-	h := handler.NewInternalHandler(&mock.TaskRepo{})
+	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil)
 	body, _ := json.Marshal(map[string]string{"status": "invalid-state"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -73,7 +73,7 @@ func TestInternalHandler_UpdateTaskStatus_TaskNotFound(t *testing.T) {
 			return domain.Task{}, domain.ErrNotFound
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo)
+	h := handler.NewInternalHandler(taskRepo, nil)
 	body, _ := json.Marshal(map[string]string{"status": "building"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/missing/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -93,7 +93,7 @@ func TestInternalHandler_UpdateTaskStatus_WithPreviewURL(t *testing.T) {
 			return domain.Task{ID: id, Status: status, PreviewURL: previewURL}, nil
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo)
+	h := handler.NewInternalHandler(taskRepo, nil)
 	body, _ := json.Marshal(map[string]string{
 		"status":     "done",
 		"previewUrl": "https://preview.e2b.dev/abc",
@@ -112,7 +112,7 @@ func TestInternalHandler_UpdateTaskStatus_WithPreviewURL(t *testing.T) {
 }
 
 func TestInternalHandler_UpdateTaskStatus_MalformedJSON(t *testing.T) {
-	h := handler.NewInternalHandler(&mock.TaskRepo{})
+	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil)
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status",
 		bytes.NewReader([]byte(`{invalid json}`)))
 	req.Header.Set("Content-Type", "application/json")
@@ -131,7 +131,7 @@ func TestInternalHandler_UpdateTaskStatus_ErrorMsgPassthrough(t *testing.T) {
 			return domain.Task{ID: id, Status: status, ErrorMsg: errorMsg}, nil
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo)
+	h := handler.NewInternalHandler(taskRepo, nil)
 	body, _ := json.Marshal(map[string]string{
 		"status":   "failed",
 		"errorMsg": "sandbox timed out",
@@ -145,5 +145,53 @@ func TestInternalHandler_UpdateTaskStatus_ErrorMsgPassthrough(t *testing.T) {
 	}
 	if capturedErrorMsg != "sandbox timed out" {
 		t.Fatalf("expected errorMsg passed through, got %q", capturedErrorMsg)
+	}
+}
+
+func TestInternalHandler_GetAgent_Success(t *testing.T) {
+	want := domain.Agent{ID: "ag-1", UserID: "u-1", Name: "Docs Writer", Tools: []string{"read_file"}, WritePaths: []string{"docs/"}}
+	agentRepo := &mock.AgentRepo{
+		GetByIDFn: func(_ context.Context, id string) (domain.Agent, error) {
+			if id == "ag-1" {
+				return want, nil
+			}
+			return domain.Agent{}, domain.ErrNotFound
+		},
+	}
+	h := handler.NewInternalHandler(nil, agentRepo)
+	r := chi.NewRouter()
+	r.Get("/internal/agents/{agentID}", h.GetAgent)
+
+	req := httptest.NewRequest(http.MethodGet, "/internal/agents/ag-1", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	var resp map[string]any
+	json.NewDecoder(w.Body).Decode(&resp)
+	data := resp["data"].(map[string]any)
+	if data["id"] != "ag-1" {
+		t.Errorf("expected id ag-1, got %v", data["id"])
+	}
+}
+
+func TestInternalHandler_GetAgent_NotFound(t *testing.T) {
+	agentRepo := &mock.AgentRepo{
+		GetByIDFn: func(_ context.Context, id string) (domain.Agent, error) {
+			return domain.Agent{}, domain.ErrNotFound
+		},
+	}
+	h := handler.NewInternalHandler(nil, agentRepo)
+	r := chi.NewRouter()
+	r.Get("/internal/agents/{agentID}", h.GetAgent)
+
+	req := httptest.NewRequest(http.MethodGet, "/internal/agents/missing", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 }

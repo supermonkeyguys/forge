@@ -20,6 +20,7 @@ type RouterDeps struct {
 	Health        *handler.HealthHandler
 	Internal      *handler.InternalHandler
 	Settings      *handler.SettingsHandler
+	Agent         *handler.AgentHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -91,6 +92,17 @@ func NewRouter(deps RouterDeps) http.Handler {
 			r.Delete("/api-key", deps.Settings.DeleteAPIKey)
 		})
 
+		// Agents
+		r.Route("/agents", func(r chi.Router) {
+			r.Get("/", deps.Agent.List)
+			r.Post("/", deps.Agent.Create)
+			r.Route("/{agentID}", func(r chi.Router) {
+				r.Get("/", deps.Agent.Get)
+				r.Put("/", deps.Agent.Update)
+				r.Delete("/", deps.Agent.Delete)
+			})
+		})
+
 		// SSE stream (task-level, not nested under project for simplicity)
 		r.Get("/tasks/{taskID}/stream", deps.Task.Stream)
 	})
@@ -100,6 +112,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 		r.Route("/internal", func(r chi.Router) {
 			r.Use(middleware.RequireInternalToken(deps.InternalToken))
 			r.Patch("/tasks/{taskID}/status", deps.Internal.UpdateTaskStatus)
+			r.Get("/agents/{agentID}", deps.Internal.GetAgent)
 		})
 	}
 

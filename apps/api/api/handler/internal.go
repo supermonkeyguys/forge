@@ -13,11 +13,12 @@ import (
 
 // InternalHandler handles /internal/* routes — service-to-service only, no JWT.
 type InternalHandler struct {
-	taskRepo domain.TaskRepository
+	taskRepo  domain.TaskRepository
+	agentRepo domain.AgentRepository
 }
 
-func NewInternalHandler(taskRepo domain.TaskRepository) *InternalHandler {
-	return &InternalHandler{taskRepo: taskRepo}
+func NewInternalHandler(taskRepo domain.TaskRepository, agentRepo domain.AgentRepository) *InternalHandler {
+	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo}
 }
 
 // PATCH /internal/tasks/{taskID}/status
@@ -57,4 +58,15 @@ func (h *InternalHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	middleware.WriteJSON(w, http.StatusOK, task)
+}
+
+// GET /internal/agents/{agentID}
+func (h *InternalHandler) GetAgent(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "agentID")
+	agent, err := h.agentRepo.GetByID(r.Context(), id)
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	middleware.WriteJSON(w, http.StatusOK, agent)
 }
