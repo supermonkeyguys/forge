@@ -43,7 +43,7 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
     return sendError(res, 400, 'invalid JSON body')
   }
 
-  const { taskId, projectId, userInput } = body as Record<string, unknown>
+  const { taskId, projectId, userInput, agentOverrides } = body as Record<string, unknown>
   if (typeof projectId !== 'string' || !projectId.trim()) {
     return sendError(res, 400, 'projectId is required')
   }
@@ -66,6 +66,9 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
     reviewHtml: null,
     error: null,
     waitingReason: null,
+    agentOverrides: typeof agentOverrides === 'object' && agentOverrides !== null && !Array.isArray(agentOverrides)
+      ? agentOverrides as Record<string, string>
+      : undefined,
     createdAt: now,
     updatedAt: now,
   }

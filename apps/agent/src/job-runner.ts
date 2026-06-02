@@ -7,6 +7,33 @@ import type { ProgressEvent } from './agents/types.js'
 import type { DraftSpec } from './agents/pm-agent.js'
 import { notifyGoAPI } from './lib/go-api-client.js'
 import { jobStore, type Job } from './job-store.js'
+import type { CustomAgentConfig } from './agents/builder/custom-agent.js'
+
+async function resolveAgentOverrides(
+  overrides: Record<string, string>,
+): Promise<Record<string, CustomAgentConfig>> {
+  const apiUrl = process.env['FORGE_API_URL']
+  const token = process.env['INTERNAL_TOKEN'] ?? ''
+  if (!apiUrl) return {}
+
+  const resolved: Record<string, CustomAgentConfig> = {}
+  await Promise.all(
+    Object.entries(overrides).map(async ([role, agentId]) => {
+      try {
+        const res = await fetch(`${apiUrl}/internal/agents/${agentId}`, {
+          headers: { 'X-Internal-Token': token },
+          signal: AbortSignal.timeout(5000),
+        })
+        if (!res.ok) return
+        const json = await res.json() as { data: CustomAgentConfig }
+        resolved[role] = json.data
+      } catch (err) {
+        console.error(`[resolveAgentOverrides] failed to fetch agent ${agentId}:`, err)
+      }
+    }),
+  )
+  return resolved
+}
 
 export async function runJob(job: Job, userInput: string): Promise<void> {
   jobStore.patch(job.id, { status: 'running', updatedAt: new Date().toISOString() })
@@ -35,8 +62,14 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
     getPreviewUrl: (port: number) => sandbox.getPreviewUrl(port),
   }
 
+  let agentOverrides: Record<string, CustomAgentConfig> | undefined
+  if (job.agentOverrides && Object.keys(job.agentOverrides).length > 0) {
+    agentOverrides = await resolveAgentOverrides(job.agentOverrides)
+  }
+
   const orc = new Orchestrator(job.projectId, userInput, {
     sandbox: sandboxAdapter,
+    agentOverrides,
 
     onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => {
       const current = jobStore.get(job.id)!

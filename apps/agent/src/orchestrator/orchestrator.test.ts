@@ -618,3 +618,51 @@ describe('Orchestrator — commitTask failure', () => {
     expect(writtenPaths).toContain('contracts/task_plan.json')
   })
 })
+
+// ── Orchestrator — agentOverrides ────────────────────────────────
+
+/**
+ * Minimal factory for tests that only need to verify OrchestratorDeps options.
+ * Uses the shared happy-path mocks; sandbox writes are no-ops.
+ */
+function makeOrchestrator(depsOverride: Partial<Parameters<typeof Orchestrator['prototype']['run']>[0]> & {
+  onEvent?: (e: ProgressEvent) => void
+  agentOverrides?: Record<string, import('../agents/builder/custom-agent.js').CustomAgentConfig>
+}) {
+  const mockSandbox = {
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    readFile: vi.fn().mockResolvedValue(''),
+    run: vi.fn().mockResolvedValue({ stdout: '{"numPassedTests":5,"numFailedTests":0,"testResults":[]}', stderr: '', exitCode: 0 }),
+    startBackground: vi.fn().mockResolvedValue(undefined),
+    getPreviewUrl: vi.fn().mockReturnValue('https://sandbox-123.e2b.app'),
+  }
+
+  return new Orchestrator('proj-1', 'build an expense manager', {
+    sandbox: mockSandbox,
+    onStateChange: async () => {},
+    onDraftReady: async (draft) => draft,
+    onEvent: depsOverride.onEvent ?? vi.fn(),
+    agentOverrides: depsOverride.agentOverrides,
+  })
+}
+
+describe('Orchestrator — agentOverrides', () => {
+  beforeEach(async () => {
+    await setupHappyPathMocks()
+  })
+
+  it('accepts agentOverrides in OrchestratorDeps without throwing', async () => {
+    const customConfig = {
+      instructions: 'Custom logic agent.',
+      tools: ['read_file'] as string[],
+      writePaths: ['packages/core/'] as string[],
+    }
+    const events: ProgressEvent[] = []
+    const orc = makeOrchestrator({
+      onEvent: (e: ProgressEvent) => events.push(e),
+      agentOverrides: { logic: customConfig },
+    })
+    const result = await orc.run()
+    expect(result.state).not.toBe('aborted')
+  })
+})

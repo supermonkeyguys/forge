@@ -29,6 +29,7 @@ import { routeErrors, isSurgicalFix, type FixInstruction } from './error-router.
 import { PMAgent, type DraftSpec } from '../agents/pm-agent.js'
 import { ArchitectAgent } from '../agents/architect-agent.js'
 import { SchemaAgent, LogicAgent, ApiAgent, UIAgent, PageAgent } from '../agents/builder/index.js'
+import { CustomBuilderAgent, type CustomAgentConfig } from '../agents/builder/custom-agent.js'
 import { TestAgent } from '../agents/test-agent.js'
 import { parallelBatches } from '../contracts/task-plan.js'
 import type { Spec } from '../contracts/spec.js'
@@ -48,6 +49,8 @@ export interface OrchestratorDeps {
   /** Inject sandbox adapter for E2B (or mock in tests). */
   sandbox: SandboxInterface
   maxRetries?: number
+  /** Optional per-role overrides. Keys are AgentRole strings; values are custom agent configs fetched from DB. */
+  agentOverrides?: Record<string, CustomAgentConfig>
 }
 
 export interface SandboxInterface {
@@ -157,6 +160,11 @@ export class Orchestrator {
   constructor(projectId: string, userInput: string, deps: OrchestratorDeps) {
     this.ctx = createContext(projectId, userInput, deps.maxRetries ?? 3)
     this.deps = deps
+    if (deps.agentOverrides) {
+      for (const [role, config] of Object.entries(deps.agentOverrides)) {
+        this.builders[role as AgentRole] = new CustomBuilderAgent(role as AgentRole, config)
+      }
+    }
   }
 
   // ── Public API ────────────────────────────────────────────────

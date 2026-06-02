@@ -17,6 +17,7 @@ export interface Job {
   reviewHtml: string | null
   error: string | null
   waitingReason: string | null
+  agentOverrides?: Record<string, string>  // role → agent DB id
   createdAt: string
   updatedAt: string
 }
