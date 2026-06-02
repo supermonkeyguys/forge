@@ -11,6 +11,32 @@ export { useProjects, useProject, useCreateProject, useDeleteProject } from './p
 export { useAgentEvents } from './task/use-agent-events.ts'
 export { useTask, useCreateTask } from './task/use-tasks.ts'
 
+// Workspace store (moved from apps/web to packages/core)
+export {
+  useWorkspaceStore,
+  selectPhase,
+  selectUserInput,
+  selectProjectId,
+  selectDraftSpec,
+  selectConfirmedSpec,
+  selectPreviewUrl,
+  selectAgentCards,
+  selectEvents,
+  selectOrchestratorState,
+  selectWaitingReason,
+  selectAgentJobId,
+} from './task/workspace-store.ts'
+export type {
+  WorkspacePhase,
+  AgentCardState,
+  DraftSpec,
+  DraftFeature,
+} from './task/workspace-store.ts'
+
+// Agent management
+export { useAgents, useCreateAgent, useUpdateAgent, useDeleteAgent } from './agent/index.ts'
+export type { UserAgent, AgentInput } from './agent/index.ts'
+
 // Settings
 export { useGetSettings, useSaveSettings, useResetApiKey } from './settings/use-settings.ts'
 export type { SettingsResponse } from './settings/settings-api.ts'
