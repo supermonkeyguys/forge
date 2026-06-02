@@ -169,7 +169,7 @@ async function handleConfirmDraft(
 
 // ── HTTP server ───────────────────────────────────────────────────
 
-export const server = createServer((req, res) => {
+export const server = createServer(async (req, res) => {
   const url = req.url ?? '/'
   const method = req.method ?? 'GET'
 
@@ -231,6 +231,28 @@ export const server = createServer((req, res) => {
         totalEvents: latest.events.length,
       },
     })
+    return
+  }
+
+  // GET /instructions/:role — serve instruction markdown files
+  const instructionsMatch = url.match(/^\/instructions\/([a-z]+)$/)
+  if (method === 'GET' && instructionsMatch) {
+    const role = instructionsMatch[1]!
+    const { readFileSync } = await import('fs')
+    const { join, dirname } = await import('path')
+    const { fileURLToPath } = await import('url')
+    const __dirname = dirname(fileURLToPath(import.meta.url))
+    const filePath = join(__dirname, 'templates/instructions', `${role}.md`)
+    try {
+      const content = readFileSync(filePath, 'utf-8')
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+      })
+      res.end(content)
+    } catch {
+      return sendError(res, 404, `No instructions for role: ${role}`)
+    }
     return
   }
 
