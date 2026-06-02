@@ -1,28 +1,10 @@
 import { useState } from 'react'
 import { useAgents } from '@forge/core'
-import { AgentList } from './components/AgentList'
-import { SYSTEM_AGENTS } from '../../lib/agent-registry'
-import type { SystemAgentDef } from '../../lib/agent-registry'
 import type { UserAgent } from '@forge/core'
-
-// Stubs — will be replaced in C3
-function AgentCard(_props: {
-  systemAgent: SystemAgentDef | null
-  customAgent: UserAgent | null
-  isCreating: boolean
-  onFork: (role: string) => void
-  onDelete: (id: string) => void
-}) {
-  return <div className="p-4 text-white/40 text-sm">Agent card (coming soon)</div>
-}
-
-function AgentTabPanel(_props: {
-  systemAgent: SystemAgentDef | null
-  customAgent: UserAgent | null
-  isCreating: boolean
-}) {
-  return <div className="p-4 text-white/40 text-sm">Tab panel (coming soon)</div>
-}
+import { AgentList } from './components/AgentList'
+import { AgentCard } from './components/AgentCard'
+import { AgentTabPanel } from './components/AgentTabPanel'
+import { SYSTEM_AGENTS } from '../../lib/agent-registry'
 
 export function AgentsPage() {
   const { data: agentsPage } = useAgents()
@@ -77,6 +59,10 @@ export function AgentsPage() {
           systemAgent={selectedSystemAgent}
           customAgent={selectedCustomAgent}
           isCreating={isCreating}
+          onCreated={(agent) => {
+            setIsCreating(false)
+            setSelectedId(`custom:${agent.id}`)
+          }}
         />
       </div>
     </div>
