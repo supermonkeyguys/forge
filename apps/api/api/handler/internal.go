@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -13,17 +15,19 @@ import (
 
 // InternalHandler handles /internal/* routes — service-to-service only, no JWT.
 type InternalHandler struct {
-	taskRepo   domain.TaskRepository
-	agentRepo  domain.AgentRepository
-	memoryRepo domain.AgentMemoryRepository
+	taskRepo    domain.TaskRepository
+	agentRepo   domain.AgentRepository
+	memoryRepo  domain.AgentMemoryRepository
+	contextRepo domain.ProjectContextRepository
 }
 
 func NewInternalHandler(
 	taskRepo domain.TaskRepository,
 	agentRepo domain.AgentRepository,
 	memoryRepo domain.AgentMemoryRepository,
+	contextRepo domain.ProjectContextRepository,
 ) *InternalHandler {
-	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo}
+	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, contextRepo: contextRepo}
 }
 
 // PATCH /internal/tasks/{taskID}/status
@@ -103,4 +107,55 @@ func (h *InternalHandler) CreateAgentMemory(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	middleware.WriteJSON(w, http.StatusCreated, mem)
+}
+
+// PUT /internal/projects/{projectID}/context/{heading}
+func (h *InternalHandler) UpsertSection(w http.ResponseWriter, r *http.Request) {
+	projectID := chi.URLParam(r, "projectID")
+	heading, _ := url.PathUnescape(chi.URLParam(r, "heading"))
+	var body struct {
+		Content   string `json:"content"`
+		AgentRole string `json:"agentRole"`
+		TaskID    string `json:"taskId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		middleware.WriteFieldError(w, "body", "invalid JSON")
+		return
+	}
+	section, err := h.contextRepo.UpsertSection(r.Context(), domain.ProjectContextSection{
+		ProjectID: projectID,
+		Heading:   heading,
+		Content:   body.Content,
+		AgentRole: body.AgentRole,
+		TaskID:    body.TaskID,
+	})
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	middleware.WriteJSON(w, http.StatusOK, section)
+}
+
+// GET /internal/projects/{projectID}/context
+func (h *InternalHandler) GetSections(w http.ResponseWriter, r *http.Request) {
+	projectID := chi.URLParam(r, "projectID")
+	sections, err := h.contextRepo.ListByProjectID(r.Context(), projectID)
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	if sections == nil {
+		sections = []domain.ProjectContextSection{}
+	}
+	if r.URL.Query().Get("format") == "markdown" {
+		var sb strings.Builder
+		for _, s := range sections {
+			sb.WriteString("## " + s.Heading + "\n\n" + s.Content + "\n\n")
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(sb.String())) //nolint:errcheck
+		return
+	}
+	middleware.WriteJSONList(w, sections, len(sections), 1, 100)
 }

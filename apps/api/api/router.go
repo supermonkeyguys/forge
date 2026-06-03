@@ -122,6 +122,8 @@ func NewRouter(deps RouterDeps) http.Handler {
 			r.Patch("/tasks/{taskID}/status", deps.Internal.UpdateTaskStatus)
 			r.Get("/agents/{agentID}", deps.Internal.GetAgent)
 			r.Post("/agents/{agentKey}/memories", deps.Internal.CreateAgentMemory)
+			r.Put("/projects/{projectID}/context/{heading}", deps.Internal.UpsertSection)
+			r.Get("/projects/{projectID}/context", deps.Internal.GetSections)
 		})
 	}
 
