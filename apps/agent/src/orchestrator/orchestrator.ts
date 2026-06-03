@@ -54,6 +54,8 @@ export interface OrchestratorDeps {
   agentOverrides?: Record<string, CustomAgentConfig>
   /** When set, context reads/writes go to the Go API instead of the sandbox file. */
   contextClient?: ProjectContextClient
+  /** User who owns this job — passed to KB tools. */
+  userID?: string
 }
 
 export interface SandboxInterface {
@@ -507,7 +509,7 @@ export class Orchestrator {
     const spawnFn: SpawnTaskFn = (params) => this.spawnTask(params)
 
     return agent.executeTask(
-      { task: taskWithContext, projectContext: context, existingFileContent: existingContent },
+      { task: taskWithContext, projectContext: context, existingFileContent: existingContent, userID: this.deps.userID },
       this.deps.onEvent,
       this.deps.sandbox,
       spawnFn,

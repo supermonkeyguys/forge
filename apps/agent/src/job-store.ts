@@ -18,6 +18,7 @@ export interface Job {
   error: string | null
   waitingReason: string | null
   agentOverrides?: Record<string, string>  // role → agent DB id
+  userId?: string
   createdAt: string
   updatedAt: string
 }

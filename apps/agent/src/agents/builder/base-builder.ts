@@ -24,6 +24,7 @@ import { tool } from 'ai'
 import { llmText as generateText } from '../../lib/ai-client.js'
 import { anthropic, BUILDER_MODEL as MODEL } from '../../lib/ai-client.js'
 import { fetchTopMemories, saveMemory, buildMemoryContext } from '../../lib/agent-memory-client.js'
+import { searchKB, saveToKB, buildKBContext } from '../../lib/workspace-kb-client.js'
 import { z } from 'zod'
 import type { AgentRunContext, AgentResult, BuilderAgent, BuilderTaskInput, ProgressEvent } from '../types.js'
 import type { PlanTask, AgentRole } from '../../contracts/task-plan.js'
@@ -61,6 +62,7 @@ function buildTools(
   currentTaskId?: string,
   currentDepth?: number,
   customWriteGuard?: (path: string) => boolean,
+  userID?: string,
 ) {
   return {
     read_file: tool({
@@ -166,6 +168,32 @@ function buildTools(
             m.memoryKey ? `[${m.memoryKey}] ${m.content}` : m.content,
           ),
         }
+      },
+    }),
+
+    search_kb: tool({
+      description: 'Search the company knowledge base for information relevant to the current task.',
+      parameters: z.object({
+        query: z.string().describe('What you want to find in the company knowledge base'),
+      }),
+      execute: async ({ query }) => {
+        emit({ type: 'agent_tool_use', agent: role, tool: 'search_kb', input: { query } })
+        const entries = await searchKB(userID ?? '', query, 5)
+        return { results: entries.map((e) => ({ title: e.title, content: e.content, verified: e.verified })) }
+      },
+    }),
+
+    save_to_kb: tool({
+      description: 'Save important company-level information to the shared knowledge base.',
+      parameters: z.object({
+        title:   z.string(),
+        content: z.string(),
+        tags:    z.array(z.string()),
+      }),
+      execute: async ({ title, content, tags }) => {
+        emit({ type: 'agent_tool_use', agent: role, tool: 'save_to_kb', input: { title } })
+        await saveToKB(userID ?? '', title, content, tags, role, currentTaskId ?? '')
+        return { ok: true, note: 'Saved to company KB — pending human verification.' }
       },
     }),
 
@@ -287,7 +315,9 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
     // Auto-inject relevant memories
     const topMemories = await fetchTopMemories(this.role, input.task.description, 3)
     const memoryContext = buildMemoryContext(topMemories)
-    const systemWithMemory = this.systemPrompt() + memoryContext
+    const kbEntries = await searchKB(input.userID ?? '', input.task.description, 3)
+    const kbContext = buildKBContext(kbEntries)
+    const systemWithMemory = this.systemPrompt() + memoryContext + kbContext
 
     const tools = buildTools(
       sandbox,
@@ -297,6 +327,7 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
       input.task.id,
       input.task.depth ?? 0,
       this.writeGuard(),
+      input.userID,
     )
 
     const { text, steps } = await generateText({

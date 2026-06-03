@@ -72,6 +72,7 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
     sandbox: sandboxAdapter,
     agentOverrides,
     contextClient: createProjectContextClient() ?? undefined,
+    userID: job.userId ?? undefined,
 
     onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => {
       const current = jobStore.get(job.id)!
