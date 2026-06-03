@@ -22,6 +22,7 @@ type RouterDeps struct {
 	Settings      *handler.SettingsHandler
 	Agent         *handler.AgentHandler
 	Memory        *handler.AgentMemoryHandler
+	KB            *handler.WorkspaceKBHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -111,6 +112,19 @@ func NewRouter(deps RouterDeps) http.Handler {
 			}
 		})
 
+		// Workspace Knowledge Base
+		if deps.KB != nil {
+			r.Route("/kb", func(r chi.Router) {
+				r.Get("/", deps.KB.List)
+				r.Post("/", deps.KB.Create)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Put("/", deps.KB.Update)
+					r.Patch("/verify", deps.KB.Verify)
+					r.Delete("/", deps.KB.Delete)
+				})
+			})
+		}
+
 		// SSE stream (task-level, not nested under project for simplicity)
 		r.Get("/tasks/{taskID}/stream", deps.Task.Stream)
 	})
@@ -124,6 +138,8 @@ func NewRouter(deps RouterDeps) http.Handler {
 			r.Post("/agents/{agentKey}/memories", deps.Internal.CreateAgentMemory)
 			r.Put("/projects/{projectID}/context/{heading}", deps.Internal.UpsertSection)
 			r.Get("/projects/{projectID}/context", deps.Internal.GetSections)
+			r.Get("/kb", deps.Internal.SearchKB)
+			r.Post("/kb", deps.Internal.CreateKBEntry)
 		})
 	}
 

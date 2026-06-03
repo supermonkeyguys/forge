@@ -19,6 +19,7 @@ type InternalHandler struct {
 	agentRepo   domain.AgentRepository
 	memoryRepo  domain.AgentMemoryRepository
 	contextRepo domain.ProjectContextRepository
+	kbRepo      domain.WorkspaceKBRepository
 }
 
 func NewInternalHandler(
@@ -26,8 +27,9 @@ func NewInternalHandler(
 	agentRepo domain.AgentRepository,
 	memoryRepo domain.AgentMemoryRepository,
 	contextRepo domain.ProjectContextRepository,
+	kbRepo domain.WorkspaceKBRepository,
 ) *InternalHandler {
-	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, contextRepo: contextRepo}
+	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, contextRepo: contextRepo, kbRepo: kbRepo}
 }
 
 // PATCH /internal/tasks/{taskID}/status
@@ -158,4 +160,57 @@ func (h *InternalHandler) GetSections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	middleware.WriteJSONList(w, sections, len(sections), 1, 100)
+}
+
+// GET /internal/kb?userid=&q=&limit=
+func (h *InternalHandler) SearchKB(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("userid")
+	q := r.URL.Query().Get("q")
+	if userID == "" {
+		middleware.WriteFieldError(w, "userid", "userid is required")
+		return
+	}
+	entries, err := h.kbRepo.Search(r.Context(), userID, q, 5)
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	if entries == nil {
+		entries = []domain.WorkspaceKBEntry{}
+	}
+	middleware.WriteJSONList(w, entries, len(entries), 1, 5)
+}
+
+// POST /internal/kb
+func (h *InternalHandler) CreateKBEntry(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		UserID      string   `json:"userId"`
+		Title       string   `json:"title"`
+		Content     string   `json:"content"`
+		Tags        []string `json:"tags"`
+		SourceAgent string   `json:"sourceAgent"`
+		SourceTask  string   `json:"sourceTask"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		middleware.WriteFieldError(w, "body", "invalid JSON")
+		return
+	}
+	if body.Tags == nil {
+		body.Tags = []string{}
+	}
+	entry, err := h.kbRepo.Create(r.Context(), domain.WorkspaceKBEntry{
+		UserID:      body.UserID,
+		Title:       body.Title,
+		Content:     body.Content,
+		Tags:        body.Tags,
+		SourceAgent: body.SourceAgent,
+		SourceTask:  body.SourceTask,
+		Verified:    false,
+		Confidence:  0.8,
+	})
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	middleware.WriteJSON(w, http.StatusCreated, entry)
 }
