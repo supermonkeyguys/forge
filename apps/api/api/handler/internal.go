@@ -13,12 +13,17 @@ import (
 
 // InternalHandler handles /internal/* routes — service-to-service only, no JWT.
 type InternalHandler struct {
-	taskRepo  domain.TaskRepository
-	agentRepo domain.AgentRepository
+	taskRepo   domain.TaskRepository
+	agentRepo  domain.AgentRepository
+	memoryRepo domain.AgentMemoryRepository
 }
 
-func NewInternalHandler(taskRepo domain.TaskRepository, agentRepo domain.AgentRepository) *InternalHandler {
-	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo}
+func NewInternalHandler(
+	taskRepo domain.TaskRepository,
+	agentRepo domain.AgentRepository,
+	memoryRepo domain.AgentMemoryRepository,
+) *InternalHandler {
+	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo}
 }
 
 // PATCH /internal/tasks/{taskID}/status
@@ -69,4 +74,33 @@ func (h *InternalHandler) GetAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	middleware.WriteJSON(w, http.StatusOK, agent)
+}
+
+// POST /internal/agents/{agentKey}/memories
+func (h *InternalHandler) CreateAgentMemory(w http.ResponseWriter, r *http.Request) {
+	agentKey := chi.URLParam(r, "agentKey")
+	var body struct {
+		UserID    string `json:"userId"`
+		Content   string `json:"content"`
+		MemoryKey string `json:"memoryKey"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		middleware.WriteFieldError(w, "body", "invalid JSON")
+		return
+	}
+	if body.Content == "" {
+		middleware.WriteFieldError(w, "content", "content is required")
+		return
+	}
+	mem, err := h.memoryRepo.Create(r.Context(), domain.AgentMemory{
+		AgentKey:  agentKey,
+		UserID:    body.UserID,
+		MemoryKey: body.MemoryKey,
+		Content:   body.Content,
+	})
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	middleware.WriteJSON(w, http.StatusCreated, mem)
 }

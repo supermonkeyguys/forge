@@ -51,7 +51,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepo)
 	taskHandler := handler.NewTaskHandler(taskRepo, projectRepo, cfg.AgentServiceURL)
 	healthHandler := handler.NewHealthHandler(pool)
-	internalHandler := handler.NewInternalHandler(taskRepo, agentRepo)
+	internalHandler := handler.NewInternalHandler(taskRepo, agentRepo, memoryRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsRepo, cfg.SettingsEncryptionKey)
 	agentHandler := handler.NewAgentHandler(agentRepo)
 	memoryHandler := handler.NewAgentMemoryHandler(memoryRepo)

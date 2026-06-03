@@ -40,16 +40,17 @@ export async function saveMemory(
   agentKey: string,
   memoryKey: string,
   content: string,
+  userId = '',
 ): Promise<void> {
-  if (!FORGE_API_URL) return
+  if (!FORGE_API_URL || !userId) return
   try {
-    await fetch(`${FORGE_API_URL}/api/v1/agents/${encodeURIComponent(agentKey)}/memories`, {
+    await fetch(`${FORGE_API_URL}/internal/agents/${encodeURIComponent(agentKey)}/memories`, {
       method: 'POST',
       headers: {
         'X-Internal-Token': INTERNAL_TOKEN,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ memoryKey, content }),
+      body: JSON.stringify({ memoryKey, content, userId }),
       signal: AbortSignal.timeout(3000),
     })
   } catch (err) {
