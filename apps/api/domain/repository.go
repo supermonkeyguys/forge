@@ -45,3 +45,10 @@ type AgentRepository interface {
 	Update(ctx context.Context, a Agent) (Agent, error)
 	Delete(ctx context.Context, id, userID string) error
 }
+
+type AgentMemoryRepository interface {
+	Create(ctx context.Context, m AgentMemory) (AgentMemory, error)
+	ListByAgentKey(ctx context.Context, agentKey, userID, query string, limit int) ([]AgentMemory, error)
+	Delete(ctx context.Context, id, userID string) error
+	DecayWeights(ctx context.Context, userID string) error
+}
