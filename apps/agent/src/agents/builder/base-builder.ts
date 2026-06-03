@@ -23,6 +23,7 @@
 import { tool } from 'ai'
 import { llmText as generateText } from '../../lib/ai-client.js'
 import { anthropic, BUILDER_MODEL as MODEL } from '../../lib/ai-client.js'
+import { fetchTopMemories, saveMemory, buildMemoryContext } from '../../lib/agent-memory-client.js'
 import { z } from 'zod'
 import type { AgentRunContext, AgentResult, BuilderAgent, BuilderTaskInput, ProgressEvent } from '../types.js'
 import type { PlanTask, AgentRole } from '../../contracts/task-plan.js'
@@ -136,6 +137,35 @@ function buildTools(
         const output = (result.stdout + result.stderr).trim()
         const passed = !output.includes('error TS')
         return { passed, output: output.slice(0, 2000) }
+      },
+    }),
+
+    remember: tool({
+      description: 'Save a piece of information to your private memory for use in future tasks.',
+      parameters: z.object({
+        key:     z.string().describe('Topic label, e.g. "style_preference" or "learned_pattern"'),
+        content: z.string().describe('The information to remember'),
+      }),
+      execute: async ({ key, content }) => {
+        emit({ type: 'agent_tool_use', agent: role, tool: 'remember', input: { key } })
+        await saveMemory(role, key, content)
+        return { ok: true }
+      },
+    }),
+
+    recall: tool({
+      description: 'Search your private memory for information relevant to the current task.',
+      parameters: z.object({
+        query: z.string().describe('What you want to recall'),
+      }),
+      execute: async ({ query }) => {
+        emit({ type: 'agent_tool_use', agent: role, tool: 'recall', input: { query } })
+        const memories = await fetchTopMemories(role, query, 5)
+        return {
+          memories: memories.map((m) =>
+            m.memoryKey ? `[${m.memoryKey}] ${m.content}` : m.content,
+          ),
+        }
       },
     }),
 
@@ -254,6 +284,11 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
       return this.generateFallback(input, emit)
     }
 
+    // Auto-inject relevant memories
+    const topMemories = await fetchTopMemories(this.role, input.task.description, 3)
+    const memoryContext = buildMemoryContext(topMemories)
+    const systemWithMemory = this.systemPrompt() + memoryContext
+
     const tools = buildTools(
       sandbox,
       emit,
@@ -266,7 +301,7 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
 
     const { text, steps } = await generateText({
       model: anthropic(MODEL),
-      system: this.systemPrompt(),
+      system: systemWithMemory,
       prompt: this.buildTaskPrompt(input),
       tools,
       maxSteps: 12,  // bumped from 8 — spawn_task adds up to 2 extra steps per spawn

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { buildMemoryContext } from '../../lib/agent-memory-client.js'
 import { extractCode } from './base-builder.js'
 import { CustomBuilderAgent } from './custom-agent.js'
 import { SchemaAgent } from './schema-agent.js'
@@ -480,4 +481,22 @@ describe('All Builder Agents interface compliance', () => {
       expect(prompt).toContain('unique-test-description-12345')
     })
   }
+})
+
+describe('buildMemoryContext', () => {
+  it('returns empty string for empty array', () => {
+    expect(buildMemoryContext([])).toBe('')
+  })
+
+  it('formats memories with memoryKey', () => {
+    const result = buildMemoryContext([{ memoryKey: 'style', content: 'prefers short functions' }])
+    expect(result).toContain('Your relevant memories')
+    expect(result).toContain('[style] prefers short functions')
+  })
+
+  it('formats memories without memoryKey', () => {
+    const result = buildMemoryContext([{ memoryKey: '', content: 'important fact' }])
+    expect(result).toContain('important fact')
+    expect(result).not.toContain('[]')
+  })
 })
