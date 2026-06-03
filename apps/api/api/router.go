@@ -21,6 +21,7 @@ type RouterDeps struct {
 	Internal      *handler.InternalHandler
 	Settings      *handler.SettingsHandler
 	Agent         *handler.AgentHandler
+	Memory        *handler.AgentMemoryHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -101,6 +102,13 @@ func NewRouter(deps RouterDeps) http.Handler {
 				r.Put("/", deps.Agent.Update)
 				r.Delete("/", deps.Agent.Delete)
 			})
+			if deps.Memory != nil {
+				r.Route("/{agentKey}/memories", func(r chi.Router) {
+					r.Get("/", deps.Memory.List)
+					r.Post("/", deps.Memory.Create)
+					r.Delete("/{memoryID}", deps.Memory.Delete)
+				})
+			}
 		})
 
 		// SSE stream (task-level, not nested under project for simplicity)
