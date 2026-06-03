@@ -58,3 +58,13 @@ type ProjectContextRepository interface {
 	ListByProjectID(ctx context.Context, projectID string) ([]ProjectContextSection, error)
 	DeleteByProjectID(ctx context.Context, projectID string) error
 }
+
+type WorkspaceKBRepository interface {
+	Create(ctx context.Context, e WorkspaceKBEntry) (WorkspaceKBEntry, error)
+	GetByID(ctx context.Context, id string) (WorkspaceKBEntry, error)
+	Search(ctx context.Context, userID, query string, limit int) ([]WorkspaceKBEntry, error)
+	List(ctx context.Context, userID string) ([]WorkspaceKBEntry, error)
+	Update(ctx context.Context, e WorkspaceKBEntry) (WorkspaceKBEntry, error)
+	Verify(ctx context.Context, id, userID string) (WorkspaceKBEntry, error)
+	Delete(ctx context.Context, id, userID string) error
+}
