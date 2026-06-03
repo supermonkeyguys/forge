@@ -119,7 +119,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 				r.Post("/", deps.KB.Create)
 				r.Route("/{id}", func(r chi.Router) {
 					r.Put("/", deps.KB.Update)
-					r.Patch("/verify", deps.KB.Verify)
+					r.Put("/verify", deps.KB.Verify)
 					r.Delete("/", deps.KB.Delete)
 				})
 			})
