@@ -1,7 +1,7 @@
 import { Icons } from '../../../components/ui/icons'
 import { cn } from '../../../lib/utils'
 
-type SettingsSection = 'api' | 'appearance'
+type SettingsSection = 'api' | 'appearance' | 'kb'
 
 export function SettingsNav({
   active, onSelect,
@@ -37,6 +37,15 @@ export function SettingsNav({
           active={false}
           onClick={() => {}}
           disabled
+        />
+      </NavGroup>
+
+      <NavGroup label="知识">
+        <NavItem
+          icon={<Icons.Database className="h-3.5 w-3.5" />}
+          label="知识库"
+          active={active === 'kb'}
+          onClick={() => onSelect('kb')}
         />
       </NavGroup>
     </nav>
