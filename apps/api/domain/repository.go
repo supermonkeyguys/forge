@@ -52,3 +52,9 @@ type AgentMemoryRepository interface {
 	Delete(ctx context.Context, id, userID string) error
 	DecayWeights(ctx context.Context, userID string) error
 }
+
+type ProjectContextRepository interface {
+	UpsertSection(ctx context.Context, s ProjectContextSection) (ProjectContextSection, error)
+	ListByProjectID(ctx context.Context, projectID string) ([]ProjectContextSection, error)
+	DeleteByProjectID(ctx context.Context, projectID string) error
+}
