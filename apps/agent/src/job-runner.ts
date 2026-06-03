@@ -6,6 +6,7 @@ import type { OrchestratorState, OrchestratorContext } from './orchestrator/stat
 import type { ProgressEvent } from './agents/types.js'
 import type { DraftSpec } from './agents/pm-agent.js'
 import { notifyGoAPI } from './lib/go-api-client.js'
+import { createProjectContextClient } from './lib/project-context-client.js'
 import { jobStore, type Job } from './job-store.js'
 import type { CustomAgentConfig } from './agents/builder/custom-agent.js'
 
@@ -70,6 +71,7 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
   const orc = new Orchestrator(job.projectId, userInput, {
     sandbox: sandboxAdapter,
     agentOverrides,
+    contextClient: createProjectContextClient() ?? undefined,
 
     onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => {
       const current = jobStore.get(job.id)!

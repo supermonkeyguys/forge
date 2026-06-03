@@ -628,6 +628,7 @@ describe('Orchestrator — commitTask failure', () => {
 function makeOrchestrator(depsOverride: Partial<Parameters<typeof Orchestrator['prototype']['run']>[0]> & {
   onEvent?: (e: ProgressEvent) => void
   agentOverrides?: Record<string, import('../agents/builder/custom-agent.js').CustomAgentConfig>
+  contextClient?: import('./orchestrator.js').OrchestratorDeps['contextClient']
 }) {
   const mockSandbox = {
     writeFile: vi.fn().mockResolvedValue(undefined),
@@ -643,6 +644,7 @@ function makeOrchestrator(depsOverride: Partial<Parameters<typeof Orchestrator['
     onDraftReady: async (draft) => draft,
     onEvent: depsOverride.onEvent ?? vi.fn(),
     agentOverrides: depsOverride.agentOverrides,
+    contextClient: depsOverride.contextClient,
   })
 }
 
@@ -664,5 +666,22 @@ describe('Orchestrator — agentOverrides', () => {
     })
     const result = await orc.run()
     expect(result.state).not.toBe('aborted')
+  })
+})
+
+describe('Orchestrator — ProjectContextClient', () => {
+  beforeEach(async () => {
+    await setupHappyPathMocks()
+  })
+
+  it('uses ProjectContextClient for read/write when provided', async () => {
+    const upserted: Array<{ heading: string }> = []
+    const contextClient = {
+      upsertSection: async (_p: string, heading: string) => { upserted.push({ heading }) },
+      getRelevantContext: async () => '## App Overview\n\nTest app\n\n',
+    }
+    const orc = makeOrchestrator({ contextClient })
+    await orc.run()
+    expect(orc.getState()).not.toBe('aborted')
   })
 })

@@ -36,6 +36,7 @@ import type { Spec } from '../contracts/spec.js'
 import type { TaskPlan, PlanTask, AgentRole } from '../contracts/task-plan.js'
 import type { ValidationReport } from '../contracts/validation-report.js'
 import type { ProgressEvent, BuilderAgent } from '../agents/types.js'
+import { type ProjectContextClient } from '../lib/project-context-client.js'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -51,6 +52,8 @@ export interface OrchestratorDeps {
   maxRetries?: number
   /** Optional per-role overrides. Keys are AgentRole strings; values are custom agent configs fetched from DB. */
   agentOverrides?: Record<string, CustomAgentConfig>
+  /** When set, context reads/writes go to the Go API instead of the sandbox file. */
+  contextClient?: ProjectContextClient
 }
 
 export interface SandboxInterface {
@@ -329,10 +332,23 @@ export class Orchestrator {
 
     const context = this.architect.buildInitialContext(this.spec!, this.plan)
 
-    await Promise.all([
-      this.writeSandboxFile('contracts/task_plan.json', JSON.stringify(this.plan, null, 2)),
-      this.writeSandboxFile('contracts/project_context.md', context),
-    ])
+    if (this.deps.contextClient) {
+      // Write initial context sections to DB
+      const sections = context.split(/^(?=## )/m).filter((s) => s.startsWith('## '))
+      for (const section of sections) {
+        const headingMatch = section.match(/^## ([^\n]+)/)
+        if (!headingMatch) continue
+        const heading = headingMatch[1]!
+        const content = section.replace(/^## [^\n]+\n/, '').trim()
+        await this.deps.contextClient.upsertSection(this.ctx.projectId, heading, content, 'architect', 'init')
+      }
+      await this.writeSandboxFile('contracts/task_plan.json', JSON.stringify(this.plan, null, 2))
+    } else {
+      await Promise.all([
+        this.writeSandboxFile('contracts/task_plan.json', JSON.stringify(this.plan, null, 2)),
+        this.writeSandboxFile('contracts/project_context.md', context),
+      ])
+    }
 
     await this.dispatch({ type: 'PLAN_READY' })
   }
@@ -504,7 +520,14 @@ export class Orchestrator {
     if (!agent) return
 
     const update = (agent as any).contextUpdate(task, _code)
-    if (update) {
+    if (!update) return
+
+    if (this.deps.contextClient) {
+      const headingMatch = update.match(/^## ([^\n]+)/m)
+      const heading = headingMatch?.[1] ?? task.agent
+      const content = update.replace(/^## [^\n]+\n/, '').trim()
+      await this.deps.contextClient.upsertSection(this.ctx.projectId, heading, content, task.agent, task.id)
+    } else {
       const current = await this.readSandboxFile('contracts/project_context.md')
       await this.writeSandboxFile(
         'contracts/project_context.md',
@@ -549,6 +572,10 @@ export class Orchestrator {
    *   page    — App Overview + Available Hooks + Available UI Components + API Contracts
    */
   private async readRelevantContext(role: AgentRole): Promise<string> {
+    if (this.deps.contextClient) {
+      return this.deps.contextClient.getRelevantContext(this.ctx.projectId, role)
+    }
+    // Fallback: sandbox file (used in tests when FORGE_API_URL not set)
     const full = await this.readSandboxFile('contracts/project_context.md')
     if (!full) return ''
 
@@ -563,14 +590,10 @@ export class Orchestrator {
     const needed = NEEDED[role]
     if (!needed) return full
 
-    // Split on ## headings, keep only needed sections + the preamble before first heading
     const sections = full.split(/^(?=## )/m)
-    const filtered = sections.filter((section) => {
-      if (!section.startsWith('## ')) return true // preamble
-      return needed.some((name) => section.startsWith(`## ${name}`))
-    })
-
-    return filtered.join('')
+    return sections
+      .filter((s) => !s.startsWith('## ') || needed.some((n) => s.startsWith(`## ${n}`)))
+      .join('')
   }
 
   // ── Sandbox I/O helpers ───────────────────────────────────────
