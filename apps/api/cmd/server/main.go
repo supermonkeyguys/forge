@@ -56,7 +56,7 @@ func main() {
 	settingsHandler := handler.NewSettingsHandler(settingsRepo, cfg.SettingsEncryptionKey)
 	agentHandler := handler.NewAgentHandler(agentRepo)
 	memoryHandler := handler.NewAgentMemoryHandler(memoryRepo)
-	pkbHandler := handler.NewProjectKBHandler(pkbRepo)
+	pkbHandler := handler.NewProjectKBHandlerWithAgent(pkbRepo, cfg.AgentServiceURL)
 
 	// 4. Assemble router
 	router := apiPkg.NewRouter(apiPkg.RouterDeps{

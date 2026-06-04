@@ -117,6 +117,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 			r.Route("/projects/{projectID}/kb", func(r chi.Router) {
 				r.Get("/", deps.KB.List)
 				r.Post("/", deps.KB.Create)
+				r.Post("/ingest", deps.KB.Ingest) // must be before /{id} wildcard
 				r.Route("/{id}", func(r chi.Router) {
 					r.Put("/", deps.KB.Update)
 					r.Put("/verify", deps.KB.Verify)
