@@ -24,7 +24,12 @@ import { tool } from 'ai'
 import { llmText as generateText } from '../../lib/ai-client.js'
 import { anthropic, BUILDER_MODEL as MODEL } from '../../lib/ai-client.js'
 import { fetchTopMemories, saveMemory, buildMemoryContext } from '../../lib/agent-memory-client.js'
-import { searchKB, saveToKB, buildKBContext } from '../../lib/workspace-kb-client.js'
+import {
+  fetchPrinciples,
+  searchProjectKB,
+  submitKBEntry,
+  buildTypedKBContext,
+} from '../../lib/project-kb-client.js'
 import { z } from 'zod'
 import type { AgentRunContext, AgentResult, BuilderAgent, BuilderTaskInput, ProgressEvent } from '../types.js'
 import type { PlanTask, AgentRole } from '../../contracts/task-plan.js'
@@ -63,6 +68,7 @@ function buildTools(
   currentDepth?: number,
   customWriteGuard?: (path: string) => boolean,
   userID?: string,
+  projectId?: string,
 ) {
   return {
     read_file: tool({
@@ -178,8 +184,8 @@ function buildTools(
       }),
       execute: async ({ query }) => {
         emit({ type: 'agent_tool_use', agent: role, tool: 'search_kb', input: { query } })
-        const entries = await searchKB(userID ?? '', query, 5)
-        return { results: entries.map((e) => ({ title: e.title, content: e.content, verified: e.verified })) }
+        const entries = await searchProjectKB(projectId ?? '', userID ?? '', query, 'spec', 5)
+        return { results: entries.map((e) => ({ title: e.title, content: e.content, type: e.type })) }
       },
     }),
 
@@ -192,8 +198,12 @@ function buildTools(
       }),
       execute: async ({ title, content, tags }) => {
         emit({ type: 'agent_tool_use', agent: role, tool: 'save_to_kb', input: { title } })
-        await saveToKB(userID ?? '', title, content, tags, role, currentTaskId ?? '')
-        return { ok: true, note: 'Saved to company KB — pending human verification.' }
+        await submitKBEntry(
+          projectId ?? '',
+          userID ?? '',
+          { type: 'spec', title, content, tags, sourceAgent: role, sourceTask: currentTaskId ?? '' },
+        )
+        return { ok: true, note: 'Saved to project KB — pending human verification.' }
       },
     }),
 
@@ -315,8 +325,17 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
     // Auto-inject relevant memories
     const topMemories = await fetchTopMemories(this.role, input.task.description, 3)
     const memoryContext = buildMemoryContext(topMemories)
-    const kbEntries = await searchKB(input.userID ?? '', input.task.description, 3)
-    const kbContext = buildKBContext(kbEntries)
+    const projectId = input.projectId ?? ''
+    const userID = input.userID ?? ''
+    const [principles, specs, pastOutputs, testAssets] = await Promise.all([
+      fetchPrinciples(projectId, userID),
+      searchProjectKB(projectId, userID, input.task.description, 'spec', 3),
+      searchProjectKB(projectId, userID, input.task.description, 'past_output', 2),
+      this.role === 'test'
+        ? searchProjectKB(projectId, userID, input.task.description, 'test_asset', 5)
+        : Promise.resolve([] as import('../../lib/project-kb-client.js').KBEntry[]),
+    ])
+    const kbContext = buildTypedKBContext({ principles, specs, pastOutputs, testAssets })
     const systemWithMemory = this.systemPrompt() + memoryContext + kbContext
 
     const tools = buildTools(
@@ -328,6 +347,7 @@ export abstract class BaseBuilderAgent implements BuilderAgent {
       input.task.depth ?? 0,
       this.writeGuard(),
       input.userID,
+      input.projectId,
     )
 
     const { text, steps } = await generateText({

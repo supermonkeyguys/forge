@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { buildMemoryContext } from '../../lib/agent-memory-client.js'
+import { buildTypedKBContext } from '../../lib/project-kb-client.js'
 import { extractCode } from './base-builder.js'
 import { CustomBuilderAgent } from './custom-agent.js'
 import { SchemaAgent } from './schema-agent.js'
@@ -481,6 +482,22 @@ describe('All Builder Agents interface compliance', () => {
       expect(prompt).toContain('unique-test-description-12345')
     })
   }
+})
+
+describe('buildTypedKBContext', () => {
+  it('returns empty string when all arrays empty', () => {
+    expect(buildTypedKBContext({ principles: [], specs: [], pastOutputs: [] })).toBe('')
+  })
+
+  it('includes Project Principles section', () => {
+    const result = buildTypedKBContext({
+      principles: [{ id: '1', type: 'principle', title: 'Keep it simple', content: 'YAGNI applies', tags: [], status: 'verified', confidence: 1 }],
+      specs: [],
+      pastOutputs: [],
+    })
+    expect(result).toContain('Project Principles')
+    expect(result).toContain('Keep it simple')
+  })
 })
 
 describe('buildMemoryContext', () => {

@@ -509,7 +509,7 @@ export class Orchestrator {
     const spawnFn: SpawnTaskFn = (params) => this.spawnTask(params)
 
     return agent.executeTask(
-      { task: taskWithContext, projectContext: context, existingFileContent: existingContent, userID: this.deps.userID },
+      { task: taskWithContext, projectContext: context, existingFileContent: existingContent, userID: this.deps.userID, projectId: this.ctx.projectId },
       this.deps.onEvent,
       this.deps.sandbox,
       spawnFn,

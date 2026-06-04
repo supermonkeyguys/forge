@@ -53,6 +53,7 @@ export interface BuilderTaskInput {
   projectContext: string;
   existingFileContent?: string;
   userID?: string;
+  projectId?: string;
 }
 
 // Builder agents additionally expose executeTask() for orchestrator-driven execution
