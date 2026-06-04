@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -36,7 +35,7 @@ func TestInternalHandler_UpdateTaskStatus_Success(t *testing.T) {
 		},
 	}
 
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{"status": "building"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -56,7 +55,7 @@ func TestInternalHandler_UpdateTaskStatus_Success(t *testing.T) {
 }
 
 func TestInternalHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
-	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{"status": "invalid-state"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -74,7 +73,7 @@ func TestInternalHandler_UpdateTaskStatus_TaskNotFound(t *testing.T) {
 			return domain.Task{}, domain.ErrNotFound
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{"status": "building"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/missing/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -94,7 +93,7 @@ func TestInternalHandler_UpdateTaskStatus_WithPreviewURL(t *testing.T) {
 			return domain.Task{ID: id, Status: status, PreviewURL: previewURL}, nil
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{
 		"status":     "done",
 		"previewUrl": "https://preview.e2b.dev/abc",
@@ -113,7 +112,7 @@ func TestInternalHandler_UpdateTaskStatus_WithPreviewURL(t *testing.T) {
 }
 
 func TestInternalHandler_UpdateTaskStatus_MalformedJSON(t *testing.T) {
-	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status",
 		bytes.NewReader([]byte(`{invalid json}`)))
 	req.Header.Set("Content-Type", "application/json")
@@ -132,7 +131,7 @@ func TestInternalHandler_UpdateTaskStatus_ErrorMsgPassthrough(t *testing.T) {
 			return domain.Task{ID: id, Status: status, ErrorMsg: errorMsg}, nil
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{
 		"status":   "failed",
 		"errorMsg": "sandbox timed out",
@@ -159,7 +158,7 @@ func TestInternalHandler_GetAgent_Success(t *testing.T) {
 			return domain.Agent{}, domain.ErrNotFound
 		},
 	}
-	h := handler.NewInternalHandler(nil, agentRepo, nil, nil, nil)
+	h := handler.NewInternalHandler(nil, agentRepo, nil, nil)
 	r := chi.NewRouter()
 	r.Get("/internal/agents/{agentID}", h.GetAgent)
 
@@ -184,7 +183,7 @@ func TestInternalHandler_GetAgent_NotFound(t *testing.T) {
 			return domain.Agent{}, domain.ErrNotFound
 		},
 	}
-	h := handler.NewInternalHandler(nil, agentRepo, nil, nil, nil)
+	h := handler.NewInternalHandler(nil, agentRepo, nil, nil)
 	r := chi.NewRouter()
 	r.Get("/internal/agents/{agentID}", h.GetAgent)
 
@@ -197,26 +196,3 @@ func TestInternalHandler_GetAgent_NotFound(t *testing.T) {
 	}
 }
 
-func TestInternalHandler_UpsertSection_Success(t *testing.T) {
-	want := domain.ProjectContextSection{
-		ID: "s-1", ProjectID: "proj-1", Heading: "Data Models", Content: "User has id, email", Version: 1,
-	}
-	contextRepo := &mock.ProjectContextRepo{
-		UpsertSectionFn: func(_ context.Context, s domain.ProjectContextSection) (domain.ProjectContextSection, error) {
-			return want, nil
-		},
-	}
-	h := handler.NewInternalHandler(nil, nil, nil, contextRepo, nil)
-	r := chi.NewRouter()
-	r.Put("/internal/projects/{projectID}/context/{heading}", h.UpsertSection)
-
-	body := `{"content":"User has id, email","agentRole":"schema","taskId":"T001"}`
-	req := httptest.NewRequest(http.MethodPut, "/internal/projects/proj-1/context/Data%20Models", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-}

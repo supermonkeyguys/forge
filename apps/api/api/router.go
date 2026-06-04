@@ -22,7 +22,7 @@ type RouterDeps struct {
 	Settings      *handler.SettingsHandler
 	Agent         *handler.AgentHandler
 	Memory        *handler.AgentMemoryHandler
-	KB            *handler.WorkspaceKBHandler
+	KB            *handler.ProjectKBHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -112,14 +112,15 @@ func NewRouter(deps RouterDeps) http.Handler {
 			}
 		})
 
-		// Workspace Knowledge Base
+		// Project Knowledge Base
 		if deps.KB != nil {
-			r.Route("/kb", func(r chi.Router) {
+			r.Route("/projects/{projectID}/kb", func(r chi.Router) {
 				r.Get("/", deps.KB.List)
 				r.Post("/", deps.KB.Create)
 				r.Route("/{id}", func(r chi.Router) {
 					r.Put("/", deps.KB.Update)
 					r.Put("/verify", deps.KB.Verify)
+					r.Put("/deprecate", deps.KB.Deprecate)
 					r.Delete("/", deps.KB.Delete)
 				})
 			})
@@ -136,10 +137,9 @@ func NewRouter(deps RouterDeps) http.Handler {
 			r.Patch("/tasks/{taskID}/status", deps.Internal.UpdateTaskStatus)
 			r.Get("/agents/{agentID}", deps.Internal.GetAgent)
 			r.Post("/agents/{agentKey}/memories", deps.Internal.CreateAgentMemory)
-			r.Put("/projects/{projectID}/context/{heading}", deps.Internal.UpsertSection)
-			r.Get("/projects/{projectID}/context", deps.Internal.GetSections)
-			r.Get("/kb", deps.Internal.SearchKB)
-			r.Post("/kb", deps.Internal.CreateKBEntry)
+			r.Get("/projects/{projectID}/kb", deps.Internal.SearchProjectKB)
+			r.Post("/projects/{projectID}/kb", deps.Internal.CreateProjectKBEntry)
+			r.Patch("/kb/{id}/content", deps.Internal.UpdateKBContent)
 		})
 	}
 

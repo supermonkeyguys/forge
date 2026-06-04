@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -15,21 +13,19 @@ import (
 
 // InternalHandler handles /internal/* routes — service-to-service only, no JWT.
 type InternalHandler struct {
-	taskRepo    domain.TaskRepository
-	agentRepo   domain.AgentRepository
-	memoryRepo  domain.AgentMemoryRepository
-	contextRepo domain.ProjectContextRepository
-	kbRepo      domain.WorkspaceKBRepository
+	taskRepo   domain.TaskRepository
+	agentRepo  domain.AgentRepository
+	memoryRepo domain.AgentMemoryRepository
+	pkbRepo    domain.ProjectKBRepository
 }
 
 func NewInternalHandler(
-	taskRepo domain.TaskRepository,
-	agentRepo domain.AgentRepository,
+	taskRepo   domain.TaskRepository,
+	agentRepo  domain.AgentRepository,
 	memoryRepo domain.AgentMemoryRepository,
-	contextRepo domain.ProjectContextRepository,
-	kbRepo domain.WorkspaceKBRepository,
+	pkbRepo    domain.ProjectKBRepository,
 ) *InternalHandler {
-	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, contextRepo: contextRepo, kbRepo: kbRepo}
+	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, pkbRepo: pkbRepo}
 }
 
 // PATCH /internal/tasks/{taskID}/status
@@ -111,85 +107,35 @@ func (h *InternalHandler) CreateAgentMemory(w http.ResponseWriter, r *http.Reque
 	middleware.WriteJSON(w, http.StatusCreated, mem)
 }
 
-// PUT /internal/projects/{projectID}/context/{heading}
-func (h *InternalHandler) UpsertSection(w http.ResponseWriter, r *http.Request) {
+// GET /internal/projects/{projectID}/kb?type=&userid=&q=&limit=
+func (h *InternalHandler) SearchProjectKB(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
-	heading, _ := url.PathUnescape(chi.URLParam(r, "heading"))
-	var body struct {
-		Content   string `json:"content"`
-		AgentRole string `json:"agentRole"`
-		TaskID    string `json:"taskId"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		middleware.WriteFieldError(w, "body", "invalid JSON")
-		return
-	}
-	section, err := h.contextRepo.UpsertSection(r.Context(), domain.ProjectContextSection{
-		ProjectID: projectID,
-		Heading:   heading,
-		Content:   body.Content,
-		AgentRole: body.AgentRole,
-		TaskID:    body.TaskID,
-	})
-	if err != nil {
-		middleware.WriteError(w, err)
-		return
-	}
-	middleware.WriteJSON(w, http.StatusOK, section)
-}
-
-// GET /internal/projects/{projectID}/context
-func (h *InternalHandler) GetSections(w http.ResponseWriter, r *http.Request) {
-	projectID := chi.URLParam(r, "projectID")
-	sections, err := h.contextRepo.ListByProjectID(r.Context(), projectID)
-	if err != nil {
-		middleware.WriteError(w, err)
-		return
-	}
-	if sections == nil {
-		sections = []domain.ProjectContextSection{}
-	}
-	if r.URL.Query().Get("format") == "markdown" {
-		var sb strings.Builder
-		for _, s := range sections {
-			sb.WriteString("## " + s.Heading + "\n\n" + s.Content + "\n\n")
-		}
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(sb.String())) //nolint:errcheck
-		return
-	}
-	middleware.WriteJSONList(w, sections, len(sections), 1, 100)
-}
-
-// GET /internal/kb?userid=&q=&limit=
-func (h *InternalHandler) SearchKB(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("userid")
 	q := r.URL.Query().Get("q")
-	if userID == "" {
-		middleware.WriteFieldError(w, "userid", "userid is required")
-		return
-	}
-	entries, err := h.kbRepo.Search(r.Context(), userID, q, 5)
+	entryType := r.URL.Query().Get("type")
+	entries, err := h.pkbRepo.Search(r.Context(), projectID, userID, q, entryType, 10)
 	if err != nil {
 		middleware.WriteError(w, err)
 		return
 	}
 	if entries == nil {
-		entries = []domain.WorkspaceKBEntry{}
+		entries = []domain.ProjectKBEntry{}
 	}
-	middleware.WriteJSONList(w, entries, len(entries), 1, 5)
+	middleware.WriteJSONList(w, entries, len(entries), 1, 10)
 }
 
-// POST /internal/kb
-func (h *InternalHandler) CreateKBEntry(w http.ResponseWriter, r *http.Request) {
+// POST /internal/projects/{projectID}/kb
+func (h *InternalHandler) CreateProjectKBEntry(w http.ResponseWriter, r *http.Request) {
+	projectID := chi.URLParam(r, "projectID")
 	var body struct {
 		UserID      string   `json:"userId"`
+		Type        string   `json:"type"`
 		Title       string   `json:"title"`
 		Content     string   `json:"content"`
 		Tags        []string `json:"tags"`
 		SourceAgent string   `json:"sourceAgent"`
 		SourceTask  string   `json:"sourceTask"`
+		Confidence  float64  `json:"confidence"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		middleware.WriteFieldError(w, "body", "invalid JSON")
@@ -198,19 +144,43 @@ func (h *InternalHandler) CreateKBEntry(w http.ResponseWriter, r *http.Request) 
 	if body.Tags == nil {
 		body.Tags = []string{}
 	}
-	entry, err := h.kbRepo.Create(r.Context(), domain.WorkspaceKBEntry{
-		UserID:      body.UserID,
-		Title:       body.Title,
-		Content:     body.Content,
-		Tags:        body.Tags,
-		SourceAgent: body.SourceAgent,
-		SourceTask:  body.SourceTask,
-		Verified:    false,
-		Confidence:  0.8,
+	if body.Type == "" {
+		body.Type = "spec"
+	}
+	if body.Confidence == 0 {
+		body.Confidence = 0.8
+	}
+	pid := projectID
+	entry, err := h.pkbRepo.Create(r.Context(), domain.ProjectKBEntry{
+		ProjectID: &pid, UserID: body.UserID, Type: body.Type,
+		Title: body.Title, Content: body.Content, Tags: body.Tags,
+		SourceAgent: body.SourceAgent, SourceTask: body.SourceTask,
+		InputType: "text", Status: "pending", Confidence: body.Confidence,
 	})
 	if err != nil {
 		middleware.WriteError(w, err)
 		return
 	}
 	middleware.WriteJSON(w, http.StatusCreated, entry)
+}
+
+// PATCH /internal/kb/{id}/content — used by ingest job
+func (h *InternalHandler) UpdateKBContent(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var body struct {
+		Content string `json:"content"`
+		Status  string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		middleware.WriteFieldError(w, "body", "invalid JSON")
+		return
+	}
+	if body.Status == "" {
+		body.Status = "pending"
+	}
+	if err := h.pkbRepo.UpdateContent(r.Context(), id, body.Content, body.Status); err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
