@@ -1,0 +1,155 @@
+<h2>Agent 展示页布局选择</h2>
+<p class="subtitle">这个页面展示 8 个 Agent 角色、它们的工具权限和写入路径边界。选一个你觉得合适的布局方向。</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="grid" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:12px;">
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:#6366f1;margin-bottom:6px;"></div>
+          <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;width:60%;margin-bottom:4px;"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:4px;width:80%;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#6366f1/20;border:1px solid #6366f1/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#a5b4fc;">read_file</span>
+            <span style="background:#6366f1/20;border:1px solid #6366f1/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#a5b4fc;">write_file</span>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:#10b981;margin-bottom:6px;"></div>
+          <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;width:55%;margin-bottom:4px;"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:4px;width:75%;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#10b981/20;border:1px solid #10b981/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#6ee7b7;">tsc_check</span>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:#f59e0b;margin-bottom:6px;"></div>
+          <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;width:50%;margin-bottom:4px;"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:4px;width:70%;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#f59e0b/20;border:1px solid #f59e0b/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#fcd34d;">str_replace</span>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:#ec4899;margin-bottom:6px;"></div>
+          <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;width:65%;margin-bottom:4px;"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:4px;width:80%;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#ec4899/20;border:1px solid #ec4899/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#f9a8d4;">read_file</span>
+            <span style="background:#ec4899/20;border:1px solid #ec4899/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#f9a8d4;">write_file</span>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:#8b5cf6;margin-bottom:6px;"></div>
+          <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;width:45%;margin-bottom:4px;"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:4px;width:70%;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#8b5cf6/20;border:1px solid #8b5cf6/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#c4b5fd;">spawn_task</span>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:#06b6d4;margin-bottom:6px;"></div>
+          <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;width:55%;margin-bottom:4px;"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:4px;width:65%;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#06b6d4/20;border:1px solid #06b6d4/30;border-radius:4px;padding:2px 5px;font-size:10px;color:#67e8f9;">tsc_check</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — 卡片网格</h3>
+      <p>每个 Agent 一张卡，工具以 badge 展示。适合快速浏览，视觉直观。3列网格，一屏能看到所有角色。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;height:180px;padding:12px;gap:8px;">
+        <div style="width:90px;flex-shrink:0;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:4px;">
+          <div style="height:24px;background:#6366f1;border-radius:4px;display:flex;align-items:center;padding:0 6px;">
+            <div style="height:6px;background:white;border-radius:3px;width:50%;opacity:0.9;"></div>
+          </div>
+          <div style="height:20px;background:rgba(255,255,255,0.06);border-radius:4px;"></div>
+          <div style="height:20px;background:rgba(255,255,255,0.06);border-radius:4px;"></div>
+          <div style="height:20px;background:rgba(255,255,255,0.06);border-radius:4px;"></div>
+          <div style="height:20px;background:rgba(255,255,255,0.06);border-radius:4px;"></div>
+          <div style="height:20px;background:rgba(255,255,255,0.06);border-radius:4px;"></div>
+          <div style="height:20px;background:rgba(255,255,255,0.06);border-radius:4px;"></div>
+          <div style="height:20px;background:rgba(255,255,255,0.06);border-radius:4px;"></div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:10px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:#6366f1;"></div>
+            <div>
+              <div style="height:9px;background:rgba(255,255,255,0.2);border-radius:4px;width:80px;margin-bottom:4px;"></div>
+              <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:4px;width:60px;"></div>
+            </div>
+          </div>
+          <div style="margin-bottom:8px;">
+            <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;width:40%;margin-bottom:5px;"></div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+              <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:3px 7px;font-size:10px;color:#a5b4fc;">read_file</span>
+              <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:3px 7px;font-size:10px;color:#a5b4fc;">write_file</span>
+              <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:3px 7px;font-size:10px;color:#a5b4fc;">str_replace</span>
+              <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:3px 7px;font-size:10px;color:#a5b4fc;">tsc_check</span>
+            </div>
+          </div>
+          <div>
+            <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;width:40%;margin-bottom:5px;"></div>
+            <div style="background:rgba(255,255,255,0.04);border-radius:4px;padding:6px 8px;">
+              <div style="height:6px;background:rgba(16,185,129,0.3);border-radius:3px;width:70%;margin-bottom:3px;"></div>
+              <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px;width:55%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — 侧边栏 + 详情</h3>
+      <p>左侧角色列表，右侧展示选中 Agent 的完整信息：工具列表、写入路径、系统 prompt 预览。适合深度查看。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="table" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="padding:12px;">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:100px 1fr 1fr;background:rgba(255,255,255,0.06);padding:6px 10px;gap:8px;">
+            <div style="height:7px;background:rgba(255,255,255,0.2);border-radius:3px;width:50%;"></div>
+            <div style="height:7px;background:rgba(255,255,255,0.2);border-radius:3px;width:40%;"></div>
+            <div style="height:7px;background:rgba(255,255,255,0.2);border-radius:3px;width:45%;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;">
+            <div style="display:grid;grid-template-columns:100px 1fr 1fr;padding:7px 10px;gap:8px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;">
+              <div style="display:flex;align-items:center;gap:5px;"><div style="width:8px;height:8px;border-radius:2px;background:#6366f1;"></div><div style="height:7px;background:rgba(255,255,255,0.15);border-radius:3px;width:40px;"></div></div>
+              <div style="display:flex;gap:3px;"><span style="background:rgba(99,102,241,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#a5b4fc;">read</span><span style="background:rgba(99,102,241,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#a5b4fc;">write</span><span style="background:rgba(99,102,241,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#a5b4fc;">tsc</span></div>
+              <div style="height:6px;background:rgba(16,185,129,0.2);border-radius:3px;width:70%;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:100px 1fr 1fr;padding:7px 10px;gap:8px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;">
+              <div style="display:flex;align-items:center;gap:5px;"><div style="width:8px;height:8px;border-radius:2px;background:#10b981;"></div><div style="height:7px;background:rgba(255,255,255,0.15);border-radius:3px;width:50px;"></div></div>
+              <div style="display:flex;gap:3px;"><span style="background:rgba(16,185,129,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#6ee7b7;">read</span><span style="background:rgba(16,185,129,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#6ee7b7;">write</span></div>
+              <div style="height:6px;background:rgba(16,185,129,0.2);border-radius:3px;width:55%;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:100px 1fr 1fr;padding:7px 10px;gap:8px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;">
+              <div style="display:flex;align-items:center;gap:5px;"><div style="width:8px;height:8px;border-radius:2px;background:#f59e0b;"></div><div style="height:7px;background:rgba(255,255,255,0.15);border-radius:3px;width:35px;"></div></div>
+              <div style="display:flex;gap:3px;"><span style="background:rgba(245,158,11,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#fcd34d;">read</span><span style="background:rgba(245,158,11,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#fcd34d;">str_replace</span><span style="background:rgba(245,158,11,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#fcd34d;">spawn</span></div>
+              <div style="height:6px;background:rgba(245,158,11,0.2);border-radius:3px;width:40%;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:100px 1fr 1fr;padding:7px 10px;gap:8px;align-items:center;">
+              <div style="display:flex;align-items:center;gap:5px;"><div style="width:8px;height:8px;border-radius:2px;background:#ec4899;"></div><div style="height:7px;background:rgba(255,255,255,0.15);border-radius:3px;width:30px;"></div></div>
+              <div style="display:flex;gap:3px;"><span style="background:rgba(236,72,153,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#f9a8d4;">read</span><span style="background:rgba(236,72,153,0.15);border-radius:3px;padding:1px 5px;font-size:9px;color:#f9a8d4;">write</span></div>
+              <div style="height:6px;background:rgba(236,72,153,0.2);border-radius:3px;width:60%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — 紧凑表格</h3>
+      <p>横向对比视图：角色名 / 工具集 / 写入路径三列。信息密度高，便于快速横向对比所有 Agent 的权限差异。</p>
+    </div>
+  </div>
+
+</div>

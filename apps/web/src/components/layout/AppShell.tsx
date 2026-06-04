@@ -59,6 +59,7 @@ export function AppShell() {
 
   const prefetchProjects = () => import('../../pages/projects')
   const prefetchAgents = () => import('../../pages/agents')
+  const prefetchKnowledge = () => import('../../pages/knowledge')
   const prefetchSettings = () => import('../../pages/settings')
 
   return (
@@ -90,6 +91,12 @@ export function AppShell() {
           icon={<Icons.Bot className="h-[17px] w-[17px]" />}
           label="Agents"
           onPrefetch={prefetchAgents}
+        />
+        <NavItem
+          to="/knowledge"
+          icon={<Icons.BookOpen className="h-[17px] w-[17px]" />}
+          label="知识库"
+          onPrefetch={prefetchKnowledge}
         />
         <div className="flex-1" />
         <div className="mb-1 h-px w-7 bg-white/[0.06]" />

@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { SettingsNav } from './components/SettingsNav'
 import { APIConfigSection } from './components/APIConfigSection'
 import { AppearanceSection } from './components/AppearanceSection'
-import { KBSection } from './components/KBSection'
 
-type SettingsSection = 'api' | 'appearance' | 'kb'
+type SettingsSection = 'api' | 'appearance'
 
 export function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('api')
@@ -15,7 +14,6 @@ export function SettingsPage() {
       <div className="flex-1 overflow-y-auto p-10">
         {activeSection === 'api' && <APIConfigSection />}
         {activeSection === 'appearance' && <AppearanceSection />}
-        {activeSection === 'kb' && <KBSection />}
       </div>
     </div>
   )

@@ -5,29 +5,50 @@ import {
   selectOrchestratorState,
   selectWaitingReason,
   selectEvents,
+  selectAgentJobId,
 } from '../../../store/workspace-store'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { ScrollArea } from '../../../components/ui/scroll-area'
 import { cn } from '../../../lib/utils'
 import { Icons } from '../../../components/ui/icons'
+import { toast } from '../../../store/toast-store'
 
 export function ConversationHistory() {
   const phase = useWorkspaceStore(selectPhase)
   const orchState = useWorkspaceStore(selectOrchestratorState)
   const waitingReason = useWorkspaceStore(selectWaitingReason)
   const events = useWorkspaceStore(selectEvents)
+  const agentJobId = useWorkspaceStore(selectAgentJobId)
+  const setPhase = useWorkspaceStore((s) => s.setPhase)
   const [iterationInput, setIterationInput] = useState('')
+  const [isSending, setIsSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [events.length])
 
-  const handleIteration = () => {
-    if (!iterationInput.trim()) return
-    // TODO: call resume API
-    setIterationInput('')
+  const handleIteration = async () => {
+    const input = iterationInput.trim()
+    if (!input || isSending || !agentJobId) return
+    setIsSending(true)
+
+    try {
+      const res = await fetch(`/agent/resume/${agentJobId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userInput: input }),
+      })
+      if (!res.ok) throw new Error('resume failed')
+      setIterationInput('')
+      // Return to running phase — polling will pick up new events
+      setPhase('running')
+    } catch {
+      toast.error('发送失败，请重试')
+    } finally {
+      setIsSending(false)
+    }
   }
 
   const stateLabel: Record<string, string> = {
@@ -81,25 +102,34 @@ export function ConversationHistory() {
         </div>
       </ScrollArea>
 
-      {/* Iteration input */}
+      {/* Iteration / resume input */}
       {(phase === 'done' || phase === 'waiting') && (
         <div className="border-t border-border/40 px-6 py-3">
           <div className="flex gap-2">
             <Input
               value={iterationInput}
               onChange={(e) => setIterationInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleIteration()}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && void handleIteration()}
               placeholder={phase === 'waiting' ? '告诉 AI 怎么解决...' : '继续迭代，例如：把按钮改成蓝色'}
               className="flex-1 border-border/40 bg-background/50 text-sm"
+              disabled={isSending}
             />
             <Button
-              onClick={handleIteration}
-              disabled={!iterationInput.trim()}
+              onClick={() => void handleIteration()}
+              disabled={!iterationInput.trim() || isSending || !agentJobId}
               size="sm"
             >
-              发送
+              {isSending ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+                  发送中
+                </span>
+              ) : '发送'}
             </Button>
           </div>
+          {!agentJobId && (phase === 'done' || phase === 'waiting') && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground/50">迭代需要 Agent 任务仍在运行中</p>
+          )}
         </div>
       )}
     </div>

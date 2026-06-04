@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { useAgentEvents } from '../../hooks/useAgentEvents'
-import { useWorkspaceStore, selectProjectId } from '../../store/workspace-store'
+import { useAgentEvents, useWorkspaceStore, selectProjectId } from '@forge/core'
 import { ConversationPanel } from './components/ConversationPanel'
 import { AgentFlowPanel } from './components/AgentFlowPanel'
 import { PreviewPanel } from './components/PreviewPanel'

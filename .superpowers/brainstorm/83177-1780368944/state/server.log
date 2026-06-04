@@ -1,0 +1,7 @@
+{"type":"server-started","port":57912,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:57912","screen_dir":"/Users/cookie/project/forge/.superpowers/brainstorm/83177-1780368944/content","state_dir":"/Users/cookie/project/forge/.superpowers/brainstorm/83177-1780368944/state"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/83177-1780368944/content/layout.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/83177-1780368944/content/waiting-1.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/83177-1780368944/content/detail-panel.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/83177-1780368944/content/agent-platform.html"}
+{"type":"screen-added","file":"/Users/cookie/project/forge/.superpowers/brainstorm/83177-1780368944/content/multica-style.html"}
+{"type":"server-stopped","reason":"idle timeout"}
