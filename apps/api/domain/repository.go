@@ -53,18 +53,13 @@ type AgentMemoryRepository interface {
 	DecayWeights(ctx context.Context, userID string) error
 }
 
-type ProjectContextRepository interface {
-	UpsertSection(ctx context.Context, s ProjectContextSection) (ProjectContextSection, error)
-	ListByProjectID(ctx context.Context, projectID string) ([]ProjectContextSection, error)
-	DeleteByProjectID(ctx context.Context, projectID string) error
-}
-
-type WorkspaceKBRepository interface {
-	Create(ctx context.Context, e WorkspaceKBEntry) (WorkspaceKBEntry, error)
-	GetByID(ctx context.Context, id string) (WorkspaceKBEntry, error)
-	Search(ctx context.Context, userID, query string, limit int) ([]WorkspaceKBEntry, error)
-	List(ctx context.Context, userID string) ([]WorkspaceKBEntry, error)
-	Update(ctx context.Context, e WorkspaceKBEntry) (WorkspaceKBEntry, error)
-	Verify(ctx context.Context, id, userID string) (WorkspaceKBEntry, error)
+type ProjectKBRepository interface {
+	Create(ctx context.Context, e ProjectKBEntry) (ProjectKBEntry, error)
+	GetByID(ctx context.Context, id string) (ProjectKBEntry, error)
+	List(ctx context.Context, projectID, userID, entryType, status string) ([]ProjectKBEntry, error)
+	Search(ctx context.Context, projectID, userID, query string, entryType string, limit int) ([]ProjectKBEntry, error)
+	Update(ctx context.Context, e ProjectKBEntry) (ProjectKBEntry, error)
+	SetStatus(ctx context.Context, id, userID, status string) (ProjectKBEntry, error)
 	Delete(ctx context.Context, id, userID string) error
+	UpdateContent(ctx context.Context, id, content, status string) error
 }
