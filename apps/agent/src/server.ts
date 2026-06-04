@@ -85,6 +85,54 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
   send(res, 202, { data: { jobId, status: 'queued' } })
 }
 
+// ── Route: POST /run-kb-ingest ────────────────────────────────────
+
+async function handleRunKBIngest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  let body: unknown
+  try { body = await readBody(req) } catch {
+    return sendError(res, 400, 'invalid JSON body')
+  }
+
+  const { kbEntryId, kbInputType, kbSourceRef } = body as Record<string, unknown>
+  if (typeof kbEntryId !== 'string' || !kbEntryId.trim()) {
+    return sendError(res, 400, 'kbEntryId is required')
+  }
+
+  const jobId = randomUUID()
+  const now = new Date().toISOString()
+
+  const job = {
+    id: jobId,
+    taskId: null,
+    projectId: '',
+    status: 'queued' as const,
+    events: [],
+    draft: null,
+    previewUrl: null,
+    reviewUrl: null,
+    reviewHtml: null,
+    error: null,
+    waitingReason: null,
+    jobType: 'kb_ingest' as const,
+    kbEntryId,
+    kbSourceRef: typeof kbSourceRef === 'string' ? kbSourceRef : '',
+    kbInputType: (kbInputType === 'file' ? 'file' : 'url') as 'url' | 'file',
+    createdAt: now,
+    updatedAt: now,
+  }
+  jobStore.add(job)
+
+  runJob(job, '').catch((err) => {
+    jobStore.patch(jobId, {
+      status: 'aborted',
+      error: err instanceof Error ? err.message : String(err),
+      updatedAt: new Date().toISOString(),
+    })
+  })
+
+  send(res, 202, { data: { jobId, status: 'queued' } })
+}
+
 // ── Route: GET /status/:jobId ─────────────────────────────────────
 
 function handleStatus(res: ServerResponse, jobId: string): void {
@@ -182,6 +230,10 @@ export const server = createServer(async (req, res) => {
 
   if (method === 'POST' && url === '/run') {
     return void handleRun(req, res)
+  }
+
+  if (method === 'POST' && url === '/run-kb-ingest') {
+    return void handleRunKBIngest(req, res)
   }
 
   const statusMatch = url.match(/^\/status\/([^/]+)$/)

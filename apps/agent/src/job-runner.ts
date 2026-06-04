@@ -1,3 +1,4 @@
+import { runKBIngestJob } from './agent-jobs/kb-ingest.js'
 import { Orchestrator } from './orchestrator/orchestrator.js'
 import { ForgeSandbox } from './sandbox/e2b-client.js'
 import { MockSandbox } from './sandbox/mock-sandbox.js'
@@ -37,6 +38,15 @@ async function resolveAgentOverrides(
 }
 
 export async function runJob(job: Job, userInput: string): Promise<void> {
+  if (job.jobType === 'kb_ingest') {
+    await runKBIngestJob(
+      job.kbEntryId ?? '',
+      (job.kbInputType ?? 'url') as 'url' | 'file',
+      job.kbSourceRef ?? '',
+    )
+    return
+  }
+
   jobStore.patch(job.id, { status: 'running', updatedAt: new Date().toISOString() })
 
   const e2bKey = process.env['E2B_API_KEY'] ?? ''
