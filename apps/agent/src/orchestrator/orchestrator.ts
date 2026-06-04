@@ -37,6 +37,10 @@ import type { TaskPlan, PlanTask, AgentRole } from '../contracts/task-plan.js'
 import type { ValidationReport } from '../contracts/validation-report.js'
 import type { ProgressEvent, BuilderAgent } from '../agents/types.js'
 import { type ProjectContextClient } from '../lib/project-context-client.js'
+import { submitKBEntry } from '../lib/project-kb-client.js'
+import { llmText, anthropic, MODEL } from '../lib/ai-client.js'
+
+const FORGE_API_URL_SET = !!(process.env['FORGE_API_URL'])
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -440,6 +444,8 @@ export class Orchestrator {
             await this.commitTask(task, codes[i]!)
             task.status = 'done'
             this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
+            // Non-blocking knowledge extraction
+            void this.extractKnowledge(task, codes[i]!)
           } catch (err) {
             task.status = 'failed'
             this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
@@ -477,6 +483,8 @@ export class Orchestrator {
             await this.commitTask(task, codes[i]!)
             task.status = 'done'
             this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
+            // Non-blocking knowledge extraction
+            void this.extractKnowledge(task, codes[i]!)
           } catch (err) {
             task.status = 'failed'
             this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
@@ -489,6 +497,45 @@ export class Orchestrator {
           JSON.stringify(this.plan, null, 2),
         )
       }
+    }
+  }
+
+  /** Extract reusable knowledge from completed tasks and submit to KB. */
+  private async extractKnowledge(task: PlanTask, code: string): Promise<void> {
+    if (!FORGE_API_URL_SET || !this.deps.userID || !this.ctx.projectId) return
+    try {
+      const { text } = await llmText({
+        model: anthropic(MODEL),
+        system: `You extract reusable knowledge from completed engineering tasks.
+For each insight worth remembering, output a JSON array (max 3 items):
+[{ "type": "spec|principle|past_output", "title": "short title", "content": "concise explanation", "confidence": 0.7 }]
+Types: principle (universal rule), spec (project-specific decision), past_output (reusable pattern).
+Output [] if nothing is genuinely reusable. Be selective — quality over quantity.`,
+        prompt: `Completed task: ${task.description}\nFile: ${task.file}\nAgent: ${task.agent}\nOutput snippet:\n${code.slice(0, 400)}`,
+      })
+      let entries: Array<{ type: string; title: string; content: string; confidence: number }> = []
+      try {
+        const trimmed = text.trim()
+        const jsonStart = trimmed.indexOf('[')
+        const jsonEnd = trimmed.lastIndexOf(']')
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          entries = JSON.parse(trimmed.slice(jsonStart, jsonEnd + 1))
+        }
+      } catch { return }
+
+      for (const entry of entries.slice(0, 3)) {
+        if (!entry.title?.trim() || !entry.content?.trim()) continue
+        await submitKBEntry(this.ctx.projectId, this.deps.userID, {
+          type: entry.type ?? 'spec',
+          title: entry.title,
+          content: entry.content,
+          sourceAgent: task.agent,
+          sourceTask: task.id,
+          confidence: typeof entry.confidence === 'number' ? entry.confidence : 0.7,
+        })
+      }
+    } catch (err) {
+      console.error('[extractKnowledge] failed:', err)
     }
   }
 
