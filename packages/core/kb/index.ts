@@ -1,2 +1,8 @@
-export { useKBEntries, useCreateKBEntry, useVerifyKBEntry, useDeleteKBEntry } from './use-kb.ts'
-export type { KBEntry, KBInput } from './use-kb.ts'
+export {
+  useKBEntries,
+  useCreateKBEntry,
+  useSetKBStatus,
+  useDeleteKBEntry,
+  useIngestKB,
+} from './use-kb.ts'
+export type { KBEntry, KBCreateInput } from './use-kb.ts'

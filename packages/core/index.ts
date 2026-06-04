@@ -37,9 +37,15 @@ export type {
 export { useAgents, useCreateAgent, useUpdateAgent, useDeleteAgent } from './agent/index.ts'
 export type { UserAgent, AgentInput } from './agent/index.ts'
 
-// Workspace KB
-export { useKBEntries, useCreateKBEntry, useVerifyKBEntry, useDeleteKBEntry } from './kb/index.ts'
-export type { KBEntry, KBInput } from './kb/index.ts'
+// Knowledge Base (project-scoped)
+export {
+  useKBEntries,
+  useCreateKBEntry,
+  useSetKBStatus,
+  useDeleteKBEntry,
+  useIngestKB,
+} from './kb/index.ts'
+export type { KBEntry, KBCreateInput } from './kb/index.ts'
 
 // Settings
 export { useGetSettings, useSaveSettings, useResetApiKey } from './settings/use-settings.ts'
