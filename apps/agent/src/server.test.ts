@@ -139,6 +139,10 @@ describe('Server — HTTP integration', () => {
     // Use in-memory MockSandbox (no E2B calls)
     process.env['E2B_API_KEY'] = 'mock'
 
+    // Mock global.fetch so TestAgent.startAndWaitForServer() succeeds immediately
+    // without actually connecting to localhost:3000
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '' }))
+
     const aiClient = await import('./lib/ai-client.js')
     setupLLMMocks(vi.mocked(aiClient.llmText))
 
@@ -148,6 +152,7 @@ describe('Server — HTTP integration', () => {
   })
 
   afterAll(async () => {
+    vi.unstubAllGlobals()
     const { server } = await import('./server.js')
     await new Promise<void>((resolve, reject) =>
       server.close((err) => (err ? reject(err) : resolve())),

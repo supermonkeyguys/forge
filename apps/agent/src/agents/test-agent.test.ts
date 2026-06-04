@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { TestAgent, parseVitestOutput, type SandboxAdapter } from './test-agent.js'
 import {
   classifyErrorAgent,
@@ -267,6 +267,13 @@ describe('TestAgent.validate() — mock sandbox', () => {
         })),
       ),
     }), steps: [] } as any)
+    // Mock global.fetch so startAndWaitForServer() returns immediately
+    // without actually connecting to localhost:3000
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '' }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('returns passed when unit tests all pass and E2E skipped', async () => {
