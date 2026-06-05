@@ -1,6 +1,7 @@
 import { useUpdateAgent } from '@forge/core'
 import type { UserAgent } from '@forge/core'
 import type { SystemAgentDef } from '../../../../lib/agent-registry'
+import { Textarea } from '../../../../components/ui/textarea'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -24,7 +25,7 @@ export function WritePathsTab({
         Agent 只能向以下路径前缀写入文件。每行一条，例如{' '}
         <code className="font-mono">packages/core/</code>。读取不受限制。
       </p>
-      <textarea
+      <Textarea
         readOnly={isReadOnly}
         value={text}
         onChange={(e) =>
@@ -36,8 +37,8 @@ export function WritePathsTab({
           )
         }
         rows={8}
-        className="resize-none rounded-[8px] border border-white/[0.07] bg-[#0d0d0d] p-3 font-mono text-[12px] text-white/60 outline-none focus:border-white/15"
         placeholder={'packages/core/\nserver/domain/'}
+        className="resize-none font-mono text-[12px] text-white/60 focus-visible:ring-0 focus-visible:border-white/15 read-only:cursor-default"
       />
       {!isReadOnly && (
         <div className="flex justify-end">

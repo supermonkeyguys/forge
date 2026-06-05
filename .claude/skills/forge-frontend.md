@@ -78,7 +78,8 @@ function GlassCard({ children, className }: { children: React.ReactNode; classNa
 - 所有 protected 路由都嵌套在 `AppShell` 内
 - sidebar 宽度固定 `w-[52px]`，不可伸缩
 - 页面内容区 `flex flex-1 flex-col overflow-hidden`
-- **不要** 在页面组件里自己写外层 `h-screen` 或全局 layout，由 AppShell 控制
+- **不要** 在 AppShell 内的页面组件里自己写 `h-screen`，用 `flex flex-1` 依赖 AppShell 撑满
+- 例外：`/login` 等 public 路由不经过 AppShell，可以用 `h-screen`
 
 ### 页面高度铺满
 ```tsx
@@ -150,6 +151,18 @@ border-white/[0.06]  ← sidebar 分割线（h-px）
 ---
 
 ## 组件模式
+
+### 表单元素映射
+
+| 原生元素 | 使用组件 | 备注 |
+|---------|---------|------|
+| `<button>` 主操作/提交 | `components/ui/button.tsx` | CVA，variant: default/secondary/ghost/destructive/outline |
+| `<button>` 工具栏/图标 | 原生 `<button>` ✅ | 简单交互，无需包装 |
+| `<input>` | `components/ui/dark-input.tsx` | 默认 font-mono，name/title 字段需 `className="font-sans"` |
+| `<textarea>` | `components/ui/textarea.tsx` | 默认带 focus ring，可用 `focus-visible:ring-0` 关闭 |
+| `<select>` | `components/ui/select.tsx` (shadcn) | `<Select>` + `<SelectTrigger>` + `<SelectContent>` + `<SelectItem>`；`SelectTrigger` 用 className 覆盖主题 |
+
+---
 
 ### 图标
 - 全部使用 `apps/web/src/components/ui/icons.tsx` 里的 SVG 组件
@@ -340,6 +353,26 @@ filesWritten: [...card.filesWritten, file]
 ```
 
 **测试要求**：凡是 store 中维护数组且用于 React list 渲染的，必须有"重复写入不产生重复元素"的测试用例。
+
+## 组件复用决策流程（新增 UI 前必走）
+
+在写任何新 UI 之前，按此顺序检查：
+
+1. **先查 `apps/web/src/components/ui/`** — button、input、confirm-modal、icons 等已按 Industrial Dark 主题适配的组件，优先使用
+2. **再查 `apps/web/src/pages/*/components/`** — 当前页面目录下有无可复用的业务组件
+3. **若无现成组件，评估封装价值**：
+   - 仅当前页面用 → 内联，不封装
+   - 2+ 页面复用 或 逻辑明显可提取 → 提取到 `apps/web/src/components/`
+   - 跨 app 共享 → 放 `packages/ui/`（但需同步适配主题）
+4. **禁止** 引入 shadcn/ui、antd、MUI 等外部 UI 库解决单个组件问题
+
+> ⚠️ `packages/ui/` 的 Button / Input 当前使用 light theme（`bg-blue-600`、`border-gray-300`）  
+> **不可直接在 apps/web 中使用**，除非已更新为 Industrial Dark token。
+
+> ⚠️ `npx shadcn add <component>` 生成的文件会包含 `import { cn } from "@/lib/utils"`  
+> 需手动改为相对路径 `../../lib/utils`（或对应深度），否则 TS 报错。
+
+---
 
 ## 新增组件 Checklist
 

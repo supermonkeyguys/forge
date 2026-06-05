@@ -3,6 +3,7 @@ import { useProjects, useKBEntries } from '@forge/core'
 import { KBList } from './components/KBList'
 import { KBAddForm } from './components/KBAddForm'
 import { cn } from '../../lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 
 const TYPE_FILTERS = [
   { value: '', label: '全部' },
@@ -52,15 +53,16 @@ export function KnowledgePage() {
         {/* Filters row */}
         <div className="flex flex-wrap items-center gap-3">
           {projects.length > 1 && (
-            <select
-              value={effectiveProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="rounded-[6px] border border-white/[0.08] bg-[#1a1a1a] px-3 py-1.5 text-[12px] text-white/70 outline-none"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <Select value={effectiveProjectId} onValueChange={setSelectedProjectId}>
+              <SelectTrigger className="h-8 w-auto rounded-[6px] border-white/[0.08] bg-white/[0.04] px-3 text-[12px] text-white/70 focus:ring-0 focus:ring-offset-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
 
           <div className="flex gap-1">

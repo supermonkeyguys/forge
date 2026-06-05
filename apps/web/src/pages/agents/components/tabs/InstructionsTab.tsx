@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useUpdateAgent } from '@forge/core'
 import type { UserAgent } from '@forge/core'
 import type { SystemAgentDef } from '../../../../lib/agent-registry'
+import { Textarea } from '../../../../components/ui/textarea'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -36,12 +37,12 @@ export function InstructionsTab({
           ? 'System Agent 的 instructions 只读。Fork 后可以自定义。'
           : 'Agent 的系统 Prompt。每次任务开始时注入 LLM。'}
       </p>
-      <textarea
+      <Textarea
         readOnly={isReadOnly}
         value={text}
         onChange={(e) => onDraftChange(e.target.value)}
-        className="flex-1 resize-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] p-3 font-mono text-[11px] leading-[1.7] text-white/60 outline-none focus:border-white/15"
         placeholder="在此输入 instructions…"
+        className="flex-1 resize-none font-mono text-[11px] leading-[1.7] text-white/60 focus-visible:ring-0 focus-visible:border-white/15 read-only:cursor-default"
       />
       {!isReadOnly && (
         <div className="flex justify-end">

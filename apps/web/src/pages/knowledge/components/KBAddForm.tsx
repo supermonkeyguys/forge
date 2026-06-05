@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react'
 import { useCreateKBEntry, useIngestKB } from '@forge/core'
 import { cn } from '../../../lib/utils'
+import { DarkInput } from '../../../components/ui/dark-input'
+import { Textarea } from '../../../components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 
 type InputMode = 'text' | 'url' | 'file'
 
@@ -57,42 +60,43 @@ export function KBAddForm({ projectId }: Props) {
           </button>
         ))}
         <div className="flex-1" />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="rounded-[5px] border border-white/[0.08] bg-[#1a1a1a] px-2 py-1 text-[11px] text-white/60 outline-none"
-        >
-          <option value="principle">原则</option>
-          <option value="spec">设计方案</option>
-          <option value="test_asset">测试资产</option>
-          <option value="past_output">过往产出</option>
-        </select>
+        <Select value={type} onValueChange={setType}>
+          <SelectTrigger className="h-7 w-auto rounded-[5px] border-white/[0.08] bg-white/[0.04] px-2 text-[11px] text-white/60 focus:ring-0 focus:ring-offset-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="principle">原则</SelectItem>
+            <SelectItem value="spec">设计方案</SelectItem>
+            <SelectItem value="test_asset">测试资产</SelectItem>
+            <SelectItem value="past_output">过往产出</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {mode === 'text' && (
         <>
-          <input
+          <DarkInput
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="标题"
-            className="w-full rounded-[6px] border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-white/80 outline-none focus:border-white/15"
+            className="w-full font-sans text-white/80 focus:border-white/15"
           />
-          <textarea
+          <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="内容"
             rows={3}
-            className="w-full resize-none rounded-[6px] border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-white/60 outline-none focus:border-white/15"
+            className="resize-none text-[13px] text-white/60 focus-visible:ring-0 focus-visible:border-white/15"
           />
         </>
       )}
 
       {mode === 'url' && (
-        <input
+        <DarkInput
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://example.com/doc"
-          className="w-full rounded-[6px] border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-white/60 outline-none focus:border-white/15"
+          className="w-full font-sans text-white/60 focus:border-white/15"
         />
       )}
 

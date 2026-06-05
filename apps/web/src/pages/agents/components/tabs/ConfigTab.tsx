@@ -1,6 +1,8 @@
 import { useCreateAgent, useUpdateAgent } from '@forge/core'
 import type { UserAgent } from '@forge/core'
 import type { SystemAgentDef } from '../../../../lib/agent-registry'
+import { DarkInput } from '../../../../components/ui/dark-input'
+import { Textarea } from '../../../../components/ui/textarea'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -48,25 +50,25 @@ export function ConfigTab({
         <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-white/25">
           名称
         </label>
-        <input
+        <DarkInput
           readOnly={isReadOnly}
           value={isReadOnly && systemAgent ? `${systemAgent.label} Agent` : draftName}
           onChange={(e) => onDraftNameChange(e.target.value)}
-          className="w-full rounded-[6px] border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-white/80 outline-none focus:border-white/15 read-only:cursor-default"
           placeholder="Agent 名称"
+          className="w-full font-sans text-white/80 focus:border-white/15 read-only:cursor-default"
         />
       </div>
       <div>
         <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-white/25">
           描述（可选）
         </label>
-        <textarea
+        <Textarea
           readOnly={isReadOnly}
           value={isReadOnly ? '' : draftDescription}
           onChange={(e) => onDraftDescChange(e.target.value)}
           rows={3}
-          className="w-full resize-none rounded-[6px] border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-white/50 outline-none placeholder:text-white/20 focus:border-white/15 read-only:cursor-default"
           placeholder="这个 Agent 的用途…"
+          className="resize-none text-[13px] text-white/50 placeholder:text-white/20 focus-visible:ring-0 focus-visible:border-white/15 read-only:cursor-default"
         />
       </div>
       {!isReadOnly && (
