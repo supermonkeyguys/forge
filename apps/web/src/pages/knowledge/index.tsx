@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useProjects, useKBEntries } from '@forge/core'
+import { Button } from '../../components/ui/button'
 import { KBList } from './components/KBList'
 import { KBAddForm } from './components/KBAddForm'
 import { cn } from '../../lib/utils'
@@ -41,12 +42,13 @@ export function KnowledgePage() {
           <h1 className="text-[15px] font-semibold text-white/90">知识库</h1>
           <p className="mt-0.5 text-[12px] text-white/35">Agent 执行任务时自动检索相关知识</p>
         </div>
-        <button
+        <Button
+          variant="violet"
+          size="sm"
           onClick={() => setIsAdding((v) => !v)}
-          className="rounded-[6px] border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-[12px] text-violet-300 hover:bg-violet-500/15"
         >
           {isAdding ? '收起' : '+ 添加知识'}
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">

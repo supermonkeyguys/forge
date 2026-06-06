@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useGetSettings, useSaveSettings, useResetApiKey } from '@forge/core'
 import { Icons } from '../../../components/ui/icons'
+import { Button } from '../../../components/ui/button'
 import { toast } from '../../../store/toast-store'
 import { GlassCard } from '../../../components/ui/glass-card'
 import { DarkInput } from '../../../components/ui/dark-input'
@@ -80,21 +81,13 @@ export function APIConfigSection() {
 
         <div className="mt-5 flex justify-end gap-2 border-t border-white/[0.05] pt-5">
           {data?.hasApiKey && (
-            <button
-              onClick={handleReset}
-              disabled={isResetting}
-              className="rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2 text-[13px] text-white/50 transition-colors hover:text-white/75 disabled:opacity-40"
-            >
+            <Button variant="secondary" onClick={handleReset} disabled={isResetting}>
               重置
-            </button>
+            </Button>
           )}
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="rounded-lg bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground shadow-[0_2px_12px] shadow-primary/35 transition-opacity disabled:opacity-40"
-          >
+          <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? '保存中...' : '保存'}
-          </button>
+          </Button>
         </div>
       </GlassCard>
     </SettingSection>

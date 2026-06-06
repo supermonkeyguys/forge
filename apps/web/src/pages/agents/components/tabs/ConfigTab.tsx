@@ -3,6 +3,7 @@ import type { UserAgent } from '@forge/core'
 import type { SystemAgentDef } from '../../../../lib/agent-registry'
 import { DarkInput } from '../../../../components/ui/dark-input'
 import { Textarea } from '../../../../components/ui/textarea'
+import { Button } from '../../../../components/ui/button'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -73,19 +74,15 @@ export function ConfigTab({
       </div>
       {!isReadOnly && (
         <div className="mt-auto flex justify-end">
-          <button
+          <Button
+            variant="violet"
+            size="sm"
             onClick={handleSave}
-            disabled={
-              createAgent.isPending || updateAgent.isPending || !draftName.trim()
-            }
-            className="rounded-[6px] border border-violet-500/35 bg-violet-500/15 px-4 py-1.5 text-[12px] font-medium text-violet-300 disabled:opacity-50"
+            disabled={createAgent.isPending || updateAgent.isPending || !draftName.trim()}
+            className="px-4"
           >
-            {createAgent.isPending || updateAgent.isPending
-              ? '保存中…'
-              : isCreating
-              ? '创建 Agent'
-              : '保存'}
-          </button>
+            {createAgent.isPending || updateAgent.isPending ? '保存中…' : isCreating ? '创建 Agent' : '保存'}
+          </Button>
         </div>
       )}
     </div>

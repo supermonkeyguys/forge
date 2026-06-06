@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useCreateKBEntry, useIngestKB } from '@forge/core'
 import { cn } from '../../../lib/utils'
+import { Button } from '../../../components/ui/button'
 import { DarkInput } from '../../../components/ui/dark-input'
 import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
@@ -110,13 +111,15 @@ export function KBAddForm({ projectId }: Props) {
       )}
 
       <div className="flex justify-end">
-        <button
+        <Button
+          variant="violet"
+          size="sm"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="rounded-[6px] border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-[12px] font-medium text-violet-300 disabled:opacity-50"
+          className="px-4"
         >
           {isPending ? '处理中…' : mode === 'url' ? '提取摘要' : mode === 'file' ? '上传解析' : '添加'}
-        </button>
+        </Button>
       </div>
     </div>
   )

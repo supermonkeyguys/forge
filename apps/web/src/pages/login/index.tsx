@@ -119,14 +119,15 @@ export function LoginPage() {
               </div>
             </div>
 
-            <button
+            <Button
+              variant="outline"
               onClick={handleDevLogin}
               disabled={isPending}
-              className="group flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border/80 px-4 py-2.5 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:text-primary disabled:opacity-50"
+              className="group w-full border-dashed border-border/80 text-muted-foreground hover:border-primary/40 hover:bg-transparent hover:text-primary"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 opacity-70 group-hover:opacity-100" />
               {devPending ? '登录中...' : '快速登录（开发模式）'}
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { useDeleteAgent } from '@forge/core'
 import type { UserAgent } from '@forge/core'
 import type { SystemAgentDef } from '../../../lib/agent-registry'
+import { Button } from '../../../components/ui/button'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -68,12 +69,14 @@ export function AgentCard({ systemAgent, customAgent, isCreating, onFork, onDele
             <span className="text-white/70">{systemAgent.writePaths.length} 条</span>
           </div>
         </div>
-        <button
+        <Button
           onClick={() => onFork(systemAgent.role)}
-          className="mt-2 w-full rounded-[7px] border border-blue-500/25 bg-blue-500/10 py-2 text-[12px] font-medium text-blue-300 transition-colors hover:bg-blue-500/15"
+          className="mt-2 w-full border-blue-500/25 bg-blue-500/10 text-blue-300 shadow-none hover:bg-blue-500/15 hover:text-blue-300 hover:border-blue-500/35"
+          variant="outline"
+          size="sm"
         >
           Fork Agent
-        </button>
+        </Button>
       </div>
     )
   }
@@ -107,15 +110,15 @@ export function AgentCard({ systemAgent, customAgent, isCreating, onFork, onDele
             <span className="text-white/70">{customAgent.writePaths.length} 条</span>
           </div>
         </div>
-        <button
-          onClick={() =>
-            deleteAgent.mutate(customAgent.id, { onSuccess: () => onDelete(customAgent.id) })
-          }
+        <Button
+          onClick={() => deleteAgent.mutate(customAgent.id, { onSuccess: () => onDelete(customAgent.id) })}
           disabled={deleteAgent.isPending}
-          className="mt-2 w-full rounded-[7px] border border-red-500/20 bg-red-500/[0.07] py-2 text-[12px] text-red-400/70 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+          className="mt-2 w-full border border-red-500/20 bg-red-500/[0.07] text-red-400/70 shadow-none hover:bg-red-500/10 hover:text-red-400"
+          variant="ghost"
+          size="sm"
         >
           {deleteAgent.isPending ? '删除中…' : '删除 Agent'}
-        </button>
+        </Button>
       </div>
     )
   }

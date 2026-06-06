@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjects, useDeleteProject, type Project, type ProjectStatus } from '@forge/core'
+import { Button } from '../../components/ui/button'
 import { toast } from '../../store/toast-store'
 import { LoadingState, ErrorState } from './components/PageStates'
 import { KanbanColumn } from './components/KanbanColumn'
@@ -80,12 +81,13 @@ export function ProjectsPage() {
           <h1 className="text-[17px] font-bold text-white/88">我的项目</h1>
           <p className="mt-0.5 text-[11.5px] text-white/30">{projects.length} 个项目</p>
         </div>
-        <button
+        <Button
           onClick={() => navigate('/projects/new')}
-          className="rounded-lg bg-gradient-to-br from-primary to-[#ea6d0e] px-4 py-1.5 text-[12.5px] font-semibold text-primary-foreground shadow-[0_2px_10px_rgba(249,115,22,0.28)] transition-opacity hover:opacity-90"
+          size="sm"
+          className="bg-gradient-to-br from-primary to-[#ea6d0e] px-4 text-[12.5px] shadow-[0_2px_10px_rgba(249,115,22,0.28)] hover:opacity-90"
         >
           + 新建项目
-        </button>
+        </Button>
       </div>
 
       {/* Kanban board */}

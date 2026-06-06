@@ -3,6 +3,7 @@ import type { UserAgent } from '@forge/core'
 import type { SystemAgentDef } from '../../../../lib/agent-registry'
 import { ALL_TOOLS } from '../../../../lib/agent-registry'
 import { cn } from '../../../../lib/utils'
+import { Button } from '../../../../components/ui/button'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -59,15 +60,15 @@ export function ToolsTab({ systemAgent, customAgent, isCreating, draftTools, onD
       </div>
       {!isReadOnly && (
         <div className="mt-auto flex justify-end">
-          <button
-            onClick={() =>
-              customAgent && updateAgent.mutate({ id: customAgent.id, tools: draftTools })
-            }
+          <Button
+            variant="violet"
+            size="sm"
+            onClick={() => customAgent && updateAgent.mutate({ id: customAgent.id, tools: draftTools })}
             disabled={isCreating || updateAgent.isPending}
-            className="rounded-[6px] border border-violet-500/35 bg-violet-500/15 px-4 py-1.5 text-[12px] font-medium text-violet-300 disabled:opacity-50"
+            className="px-4"
           >
             {updateAgent.isPending ? '保存中…' : '保存'}
-          </button>
+          </Button>
         </div>
       )}
     </div>
