@@ -6,6 +6,7 @@ import { resolve } from 'path'
 const provider = createOpenAI({
   apiKey: process.env['OPENAI_API_KEY'] ?? '',
   baseURL: process.env['OPENAI_BASE_URL'] ?? undefined,
+  compatibility: 'compatible', // use /v1/chat/completions, not /v1/responses
 })
 
 /** Model for PM/Architect agents (generateText, no tools) */
@@ -14,7 +15,8 @@ export const MODEL = process.env['OPENAI_MODEL'] ?? 'gpt-4o'
 /** Model for Builder/Test agents (generateText with tool calls) */
 export const BUILDER_MODEL = process.env['OPENAI_BUILDER_MODEL'] ?? 'gpt-4o'
 
-export const anthropic = provider
+// Use .chat() to force /v1/chat/completions — provider() defaults to /v1/responses in v3
+export const anthropic = provider.chat
 
 /** generateText with higher retry count to handle relay node flapping.
  *  When FORGE_USE_STUB=true, returns a fixture instead of calling the LLM. */
