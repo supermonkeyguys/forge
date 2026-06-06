@@ -7,7 +7,7 @@ export function ConversationPanel() {
   const phase = useWorkspaceStore(selectPhase)
 
   return (
-    <div className="relative z-10 flex h-full flex-col border-r border-border/60 bg-card/60 backdrop-blur-md">
+    <div className="relative z-10 flex min-h-0 flex-col overflow-hidden border-r border-border/60 bg-card/60 backdrop-blur-md">
       <div className="h-px bg-gradient-to-r from-transparent via-border/80 to-transparent" />
 
       <div className="flex flex-1 flex-col overflow-hidden">

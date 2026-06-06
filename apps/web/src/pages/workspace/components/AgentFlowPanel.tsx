@@ -84,7 +84,7 @@ export function AgentFlowPanel() {
   }
 
   return (
-    <div className="relative z-10 flex h-full flex-col overflow-hidden" data-panel="agent-flow">
+    <div className="relative z-10 flex min-h-0 flex-col overflow-hidden" data-panel="agent-flow">
       {/* Orchestrator status bar */}
       <OrchestratorBar state={orchState} phase={phase} onMock={import.meta.env.DEV ? injectMockEvents : undefined} />
 

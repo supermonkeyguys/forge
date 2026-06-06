@@ -15,7 +15,7 @@ export function PreviewPanel() {
   const [iframeKey, setIframeKey] = useState(0)
 
   return (
-    <div className="relative z-10 flex h-full flex-col border-l border-border/40 bg-card/40 backdrop-blur-sm">
+    <div className="relative z-10 flex min-h-0 flex-col overflow-hidden border-l border-border/40 bg-card/40 backdrop-blur-sm">
       {/* Browser chrome */}
       <div className="flex items-center gap-2 border-b border-border/40 px-4 py-2.5">
         {/* Window dots */}

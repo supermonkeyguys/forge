@@ -80,7 +80,8 @@ function GlassCard({ children, className }: { children: React.ReactNode; classNa
 - 页面内容区 `flex flex-1 flex-col overflow-hidden`
 - **不要** 在 AppShell 内的页面组件里自己写 `h-screen`，用 `flex flex-1 min-h-0` 依赖 AppShell 撑满
 - `min-h-0` 不可省略：flex item 默认 `min-height: auto`，不加会导致高度不受约束
-- grid 需加 `[grid-template-rows:1fr]`：auto row 高度不是"确定值"，grid 子元素的 `h-full` 无法解析，内部 ScrollArea / flex-1 全部失效
+- grid row 必须用 `[grid-template-rows:minmax(0,1fr)]`（不能只写 `1fr`）：`minmax(0,1fr)` 把最小值设为 0，防止 item 内容撑高 track；纯 `1fr` 在 flex 上下文中部分浏览器不视为 definite，内容仍会撑开 row
+- grid item 根节点用 `min-h-0 overflow-hidden`（不用 `h-full`）：`min-h-0` 防止 item 超出分配区域，`overflow-hidden` 隔离内容高度；`h-full` 依赖 track 高度确定才能解析，不如直接用 stretch + min-h-0
 - 例外：`/login` 等 public 路由不经过 AppShell，可以用 `h-screen`
 
 ### 页面高度铺满
