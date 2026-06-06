@@ -35,7 +35,7 @@ func TestInternalHandler_UpdateTaskStatus_Success(t *testing.T) {
 		},
 	}
 
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{"status": "building"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -55,7 +55,7 @@ func TestInternalHandler_UpdateTaskStatus_Success(t *testing.T) {
 }
 
 func TestInternalHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
-	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{"status": "invalid-state"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -73,7 +73,7 @@ func TestInternalHandler_UpdateTaskStatus_TaskNotFound(t *testing.T) {
 			return domain.Task{}, domain.ErrNotFound
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{"status": "building"})
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/missing/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -93,7 +93,7 @@ func TestInternalHandler_UpdateTaskStatus_WithPreviewURL(t *testing.T) {
 			return domain.Task{ID: id, Status: status, PreviewURL: previewURL}, nil
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{
 		"status":     "done",
 		"previewUrl": "https://preview.e2b.dev/abc",
@@ -112,7 +112,7 @@ func TestInternalHandler_UpdateTaskStatus_WithPreviewURL(t *testing.T) {
 }
 
 func TestInternalHandler_UpdateTaskStatus_MalformedJSON(t *testing.T) {
-	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status",
 		bytes.NewReader([]byte(`{invalid json}`)))
 	req.Header.Set("Content-Type", "application/json")
@@ -131,7 +131,7 @@ func TestInternalHandler_UpdateTaskStatus_ErrorMsgPassthrough(t *testing.T) {
 			return domain.Task{ID: id, Status: status, ErrorMsg: errorMsg}, nil
 		},
 	}
-	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil)
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{
 		"status":   "failed",
 		"errorMsg": "sandbox timed out",
@@ -158,7 +158,7 @@ func TestInternalHandler_GetAgent_Success(t *testing.T) {
 			return domain.Agent{}, domain.ErrNotFound
 		},
 	}
-	h := handler.NewInternalHandler(nil, agentRepo, nil, nil, nil)
+	h := handler.NewInternalHandler(nil, agentRepo, nil, nil, nil, nil)
 	r := chi.NewRouter()
 	r.Get("/internal/agents/{agentID}", h.GetAgent)
 
@@ -183,7 +183,7 @@ func TestInternalHandler_GetAgent_NotFound(t *testing.T) {
 			return domain.Agent{}, domain.ErrNotFound
 		},
 	}
-	h := handler.NewInternalHandler(nil, agentRepo, nil, nil, nil)
+	h := handler.NewInternalHandler(nil, agentRepo, nil, nil, nil, nil)
 	r := chi.NewRouter()
 	r.Get("/internal/agents/{agentID}", h.GetAgent)
 
@@ -211,7 +211,7 @@ func TestInternalHandler_CreateTaskStep_Success(t *testing.T) {
 			return step, nil
 		},
 	}
-	h := handler.NewInternalHandler(nil, nil, nil, nil, stepRepo)
+	h := handler.NewInternalHandler(nil, nil, nil, nil, stepRepo, nil)
 	body, _ := json.Marshal(map[string]any{
 		"seqNo":      0,
 		"agent":      "schema",
@@ -230,7 +230,7 @@ func TestInternalHandler_CreateTaskStep_Success(t *testing.T) {
 }
 
 func TestInternalHandler_CreateTaskStep_MissingAgent(t *testing.T) {
-	h := handler.NewInternalHandler(nil, nil, nil, nil, &mock.TaskStepRepo{})
+	h := handler.NewInternalHandler(nil, nil, nil, nil, &mock.TaskStepRepo{}, nil)
 	body, _ := json.Marshal(map[string]any{"seqNo": 0, "summary": "ok"})
 	req := httptest.NewRequest(http.MethodPost, "/internal/tasks/task-1/steps", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

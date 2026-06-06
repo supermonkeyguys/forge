@@ -18,6 +18,7 @@ type InternalHandler struct {
 	memoryRepo   domain.AgentMemoryRepository
 	pkbRepo      domain.ProjectKBRepository
 	taskStepRepo domain.TaskStepRepository
+	projectRepo  domain.ProjectRepository
 }
 
 func NewInternalHandler(
@@ -26,8 +27,9 @@ func NewInternalHandler(
 	memoryRepo   domain.AgentMemoryRepository,
 	pkbRepo      domain.ProjectKBRepository,
 	taskStepRepo domain.TaskStepRepository,
+	projectRepo  domain.ProjectRepository,
 ) *InternalHandler {
-	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, pkbRepo: pkbRepo, taskStepRepo: taskStepRepo}
+	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, pkbRepo: pkbRepo, taskStepRepo: taskStepRepo, projectRepo: projectRepo}
 }
 
 // PATCH /internal/tasks/{taskID}/status
@@ -63,6 +65,14 @@ func (h *InternalHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reques
 	if len(body.Events) > 0 && string(body.Events) != "null" {
 		if err := h.taskRepo.SaveEvents(r.Context(), taskID, string(body.Events)); err != nil {
 			log.Printf("[UpdateTaskStatus] SaveEvents taskID=%s err=%v", taskID, err)
+		}
+	}
+
+	// Mirror task status → project status so the projects kanban reflects live state.
+	// ProjectStatus values are identical strings to TaskStatus values.
+	if h.projectRepo != nil && task.ProjectID != "" {
+		if _, err := h.projectRepo.UpdateStatus(r.Context(), task.ProjectID, domain.ProjectStatus(body.Status), body.PreviewURL); err != nil {
+			log.Printf("[UpdateTaskStatus] projectRepo.UpdateStatus project=%s err=%v", task.ProjectID, err)
 		}
 	}
 
