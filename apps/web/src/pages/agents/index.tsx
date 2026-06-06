@@ -32,7 +32,7 @@ export function AgentsPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <div className="w-40 flex-shrink-0 border-r border-white/[0.06]">
+      <div className="flex w-40 flex-shrink-0 flex-col border-r border-white/[0.06]">
         <AgentList
           customAgents={customAgents}
           selectedId={selectedId}
