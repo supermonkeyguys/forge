@@ -140,6 +140,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 		r.Route("/internal", func(r chi.Router) {
 			r.Use(middleware.RequireInternalToken(deps.InternalToken))
 			r.Patch("/tasks/{taskID}/status", deps.Internal.UpdateTaskStatus)
+			r.Post("/tasks/{taskID}/steps", deps.Internal.CreateTaskStep)
 			r.Get("/agents/{agentID}", deps.Internal.GetAgent)
 			r.Post("/agents/{agentKey}/memories", deps.Internal.CreateAgentMemory)
 			r.Get("/projects/{projectID}/kb", deps.Internal.SearchProjectKB)
