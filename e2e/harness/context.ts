@@ -34,6 +34,31 @@ export class ScenarioContext implements IScenarioContext {
       this._collector.record({ method: 'GET', url, status: res.status, body: data, timestamp: Date.now() })
       return { status: res.status, data }
     },
+
+    postForm: async <T = unknown>(url: string, fields: Record<string, string>): Promise<ApiResponse<T>> => {
+      const token = this.state['_token'] as string | undefined
+      const form = new FormData()
+      for (const [k, v] of Object.entries(fields)) form.append(k, v)
+      const res = await fetch(`${API_BASE}${url}`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: form,
+      })
+      const data = await res.json().catch(() => null) as T
+      this._collector.record({ method: 'POST', url, status: res.status, body: data, timestamp: Date.now() })
+      return { status: res.status, data }
+    },
+
+    delete: async <T = unknown>(url: string): Promise<ApiResponse<T>> => {
+      const token = this.state['_token'] as string | undefined
+      const res = await fetch(`${API_BASE}${url}`, {
+        method: 'DELETE',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+      const data = await res.json().catch(() => null) as T
+      this._collector.record({ method: 'DELETE', url, status: res.status, body: data, timestamp: Date.now() })
+      return { status: res.status, data }
+    },
   }
 
   checkpoint(name: string, passed: boolean, details?: string): void {

@@ -38,6 +38,8 @@ export interface ApiResponse<T = unknown> {
 export interface ScenarioContextApi {
   post<T = unknown>(url: string, body: unknown): Promise<ApiResponse<T>>
   get<T = unknown>(url: string): Promise<ApiResponse<T>>
+  postForm<T = unknown>(url: string, fields: Record<string, string>): Promise<ApiResponse<T>>
+  delete<T = unknown>(url: string): Promise<ApiResponse<T>>
 }
 
 export interface IScenarioContext {

@@ -2,9 +2,11 @@ import { ScenarioRunner } from '../harness/runner'
 import { ReportWriter } from '../harness/report-writer'
 import type { Scenario } from '../harness/types'
 import { createProjectScenario } from './create-project'
+import { kbIngestScenario } from './kb-ingest'
 
 const SCENARIOS: Record<string, Scenario> = {
   'create-project': createProjectScenario,
+  'kb-ingest': kbIngestScenario,
 }
 
 const name = process.argv[2]

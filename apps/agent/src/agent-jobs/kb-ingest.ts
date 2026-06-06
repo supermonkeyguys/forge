@@ -1,5 +1,4 @@
-import { generateText } from 'ai'
-import { anthropic, MODEL } from '../lib/ai-client.js'
+import { anthropic, MODEL, llmText } from '../lib/ai-client.js'
 
 const FORGE_API_URL = process.env['FORGE_API_URL'] ?? ''
 const INTERNAL_TOKEN = process.env['INTERNAL_TOKEN'] ?? ''
@@ -37,7 +36,7 @@ export async function runKBIngestJob(
     return
   }
 
-  const { text: summary } = await generateText({
+  const { text: summary } = await llmText({
     model: anthropic(MODEL),
     system: `You extract structured knowledge from content.
 Output a concise summary (max 400 words) that:
