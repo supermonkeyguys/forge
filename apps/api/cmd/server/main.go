@@ -45,6 +45,7 @@ func main() {
 	agentRepo := postgres.NewAgentRepo(pool)
 	memoryRepo := postgres.NewAgentMemoryRepo(pool)
 	pkbRepo := postgres.NewProjectKBRepo(pool)
+	taskStepRepo := postgres.NewTaskStepRepo(pool)
 
 	// 3. Build handlers (receive domain interfaces)
 	hasher := handler.BcryptHasher{}
@@ -52,7 +53,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepo)
 	taskHandler := handler.NewTaskHandler(taskRepo, projectRepo, cfg.AgentServiceURL)
 	healthHandler := handler.NewHealthHandler(pool)
-	internalHandler := handler.NewInternalHandler(taskRepo, agentRepo, memoryRepo, pkbRepo)
+	internalHandler := handler.NewInternalHandler(taskRepo, agentRepo, memoryRepo, pkbRepo, taskStepRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsRepo, cfg.SettingsEncryptionKey)
 	agentHandler := handler.NewAgentHandler(agentRepo)
 	memoryHandler := handler.NewAgentMemoryHandler(memoryRepo)

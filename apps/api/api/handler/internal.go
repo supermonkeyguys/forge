@@ -13,19 +13,21 @@ import (
 
 // InternalHandler handles /internal/* routes — service-to-service only, no JWT.
 type InternalHandler struct {
-	taskRepo   domain.TaskRepository
-	agentRepo  domain.AgentRepository
-	memoryRepo domain.AgentMemoryRepository
-	pkbRepo    domain.ProjectKBRepository
+	taskRepo     domain.TaskRepository
+	agentRepo    domain.AgentRepository
+	memoryRepo   domain.AgentMemoryRepository
+	pkbRepo      domain.ProjectKBRepository
+	taskStepRepo domain.TaskStepRepository
 }
 
 func NewInternalHandler(
-	taskRepo   domain.TaskRepository,
-	agentRepo  domain.AgentRepository,
-	memoryRepo domain.AgentMemoryRepository,
-	pkbRepo    domain.ProjectKBRepository,
+	taskRepo     domain.TaskRepository,
+	agentRepo    domain.AgentRepository,
+	memoryRepo   domain.AgentMemoryRepository,
+	pkbRepo      domain.ProjectKBRepository,
+	taskStepRepo domain.TaskStepRepository,
 ) *InternalHandler {
-	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, pkbRepo: pkbRepo}
+	return &InternalHandler{taskRepo: taskRepo, agentRepo: agentRepo, memoryRepo: memoryRepo, pkbRepo: pkbRepo, taskStepRepo: taskStepRepo}
 }
 
 // PATCH /internal/tasks/{taskID}/status
@@ -183,4 +185,47 @@ func (h *InternalHandler) UpdateKBContent(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// POST /internal/tasks/{taskID}/steps
+func (h *InternalHandler) CreateTaskStep(w http.ResponseWriter, r *http.Request) {
+	taskID := chi.URLParam(r, "taskID")
+
+	var body struct {
+		SeqNo      int                    `json:"seqNo"`
+		Agent      string                 `json:"agent"`
+		Summary    string                 `json:"summary"`
+		ToolCalls  []domain.ToolCallEntry `json:"toolCalls"`
+		DurationMs int                    `json:"durationMs"`
+		Status     string                 `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		middleware.WriteFieldError(w, "body", "invalid JSON")
+		return
+	}
+	if body.Agent == "" {
+		middleware.WriteFieldError(w, "agent", "agent is required")
+		return
+	}
+	if body.Status == "" {
+		body.Status = "done"
+	}
+	if body.ToolCalls == nil {
+		body.ToolCalls = []domain.ToolCallEntry{}
+	}
+
+	step, err := h.taskStepRepo.Create(r.Context(), domain.TaskStep{
+		TaskID:     taskID,
+		SeqNo:      body.SeqNo,
+		Agent:      body.Agent,
+		Summary:    body.Summary,
+		ToolCalls:  body.ToolCalls,
+		DurationMs: body.DurationMs,
+		Status:     body.Status,
+	})
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	middleware.WriteJSON(w, http.StatusCreated, step)
 }
