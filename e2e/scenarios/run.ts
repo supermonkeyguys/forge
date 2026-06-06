@@ -16,17 +16,19 @@ if (!name || !SCENARIOS[name]) {
   process.exit(1)
 }
 
-let report
-try {
-  report = await new ScenarioRunner().run(SCENARIOS[name])
-} catch (err) {
-  console.error(`\nScenario aborted: ${err}`)
-  process.exit(1)
+async function main() {
+  let report
+  try {
+    report = await new ScenarioRunner().run(SCENARIOS[name])
+  } catch (err) {
+    console.error(`\nScenario aborted: ${err}`)
+    process.exit(1)
+  }
+
+  const path = new ReportWriter('e2e/reports').write(report)
+  console.log(`\nReport: ${path}`)
+  console.log(`Status: ${report.status.toUpperCase()}`)
+  process.exit(report.status === 'passed' ? 0 : 1)
 }
 
-const path = new ReportWriter('e2e/reports').write(report)
-
-console.log(`\nReport: ${path}`)
-console.log(`Status: ${report.status.toUpperCase()}`)
-
-process.exit(report.status === 'passed' ? 0 : 1)
+main()

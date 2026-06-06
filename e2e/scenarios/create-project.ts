@@ -11,7 +11,7 @@ export const createProjectScenario: Scenario = {
     // Register test user (409 if already exists → fall back to login)
     const reg = await ctx.api.post<{ data?: { token?: string } }>(
       '/api/v1/auth/register',
-      { email: TEST_EMAIL, password: TEST_PASSWORD },
+      { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Scenario Test User' },
     )
     if (reg.status === 201 && reg.data?.data?.token) {
       ctx.state['_token'] = reg.data.data.token
@@ -70,7 +70,11 @@ export const createProjectScenario: Scenario = {
         await page.goto(`${WEB_BASE}/login`)
         await page.getByRole('button', { name: '快速登录（开发模式）' }).click()
         await page.waitForURL('**/projects', { timeout: 10_000 })
-        const heading = await page.getByRole('heading', { name: '我的项目' }).isVisible().catch(() => false)
+        await page.waitForLoadState('networkidle')
+        const heading = await page.getByRole('heading', { name: '我的项目' })
+          .waitFor({ timeout: 5_000 })
+          .then(() => true)
+          .catch(() => false)
         ctx.checkpoint('projects page loaded', heading, '/projects heading not visible after dev login')
       },
     },

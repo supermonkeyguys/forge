@@ -65,7 +65,7 @@ export class ReportWriter {
 
   write(report: Report): string {
     mkdirSync(this.dir, { recursive: true })
-    const slug = report.scenarioName.replace(/\s+/g, '-').replace(/[^\w-]/g, '')
+    const slug = report.scenarioName.replace(/\s+/g, '-').replace(/[^\w-]/g, '') || Date.now().toString()
     const filename = `${formatDate()}-${slug}.md`
     const path = join(this.dir, filename)
 
