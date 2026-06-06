@@ -44,6 +44,14 @@ const FORGE_API_URL_SET = !!(process.env['FORGE_API_URL'])
 
 // ── Types ─────────────────────────────────────────────────────────
 
+export interface CompletedStep {
+  agent: string
+  summary: string
+  toolCalls: { tool: string; input: Record<string, unknown> }[]
+  durationMs: number
+  status: 'done' | 'failed'
+}
+
 export interface OrchestratorDeps {
   /** Called on every state transition — used to persist state + push SSE events. */
   onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => Promise<void>
@@ -60,6 +68,8 @@ export interface OrchestratorDeps {
   contextClient?: ProjectContextClient
   /** User who owns this job — passed to KB tools. */
   userID?: string
+  /** Called after each logical agent step completes (analyze, plan, task, validate). */
+  onTaskComplete?: (step: CompletedStep) => void
 }
 
 export interface SandboxInterface {
@@ -209,6 +219,39 @@ export class Orchestrator {
   getState(): OrchestratorState { return this.ctx.state }
   getContext(): OrchestratorContext { return { ...this.ctx } }
 
+  private buildStep(
+    agent: string,
+    events: ProgressEvent[],
+    durationMs: number,
+    status: 'done' | 'failed',
+    summaryOverride?: string,
+  ): CompletedStep {
+    const toolCalls = events
+      .filter((e): e is Extract<ProgressEvent, { type: 'agent_tool_use' }> =>
+        e.type === 'agent_tool_use',
+      )
+      .map((e) => ({
+        tool: e.tool,
+        input: (typeof e.input === 'object' && e.input !== null
+          ? e.input
+          : {}) as Record<string, unknown>,
+      }))
+
+    const fileWrite = events.find(
+      (e): e is Extract<ProgressEvent, { type: 'agent_file_write' }> =>
+        e.type === 'agent_file_write',
+    )
+    const n = toolCalls.length
+    const summary =
+      summaryOverride ??
+      (fileWrite
+        ? `${fileWrite.file} done (${n} tool call${n !== 1 ? 's' : ''})`
+        : (events.find((e) => e.type === 'agent_start') as { message?: string } | undefined)
+            ?.message ?? agent)
+
+    return { agent, summary, toolCalls, durationMs, status }
+  }
+
   /**
    * Dynamically spawn a sub-task from within a Builder agent's tool-use loop.
    * Depth is capped at 1 — spawned tasks cannot spawn further tasks.
@@ -292,7 +335,9 @@ export class Orchestrator {
   // ── Phase: analyzing ─────────────────────────────────────────
 
   private async stepAnalyze(): Promise<void> {
+    const pmStart = Date.now()
     const draft = await this.pm.draft(this.ctx.userInput, this.deps.onEvent)
+    const pmDuration = Date.now() - pmStart
 
     // Post-LLM: surface what the PM actually found
     this.emit({
@@ -313,6 +358,14 @@ export class Orchestrator {
     const confirmedDraft = await this.deps.onDraftReady(draft)
     this.spec = this.pm.finalize(confirmedDraft)
 
+    this.deps.onTaskComplete?.({
+      agent: 'pm',
+      summary: `"${this.spec.title}" — ${this.spec.features.length} feature(s) in ${this.spec.business_domain}`,
+      toolCalls: [],
+      durationMs: pmDuration,
+      status: 'done',
+    })
+
     await this.writeSandboxFile('contracts/spec.json', JSON.stringify(this.spec, null, 2))
     await this.dispatch({ type: 'SPEC_READY' })
   }
@@ -326,7 +379,9 @@ export class Orchestrator {
       message: `Planning "${this.spec!.title}"...`,
     })
 
+    const archStart = Date.now()
     this.plan = await this.architect.plan(this.spec!, this.deps)
+    const archDuration = Date.now() - archStart
 
     // Post-LLM: surface task breakdown
     const roles = [...new Set(this.plan.tasks.map((t) => t.agent))]
@@ -356,6 +411,14 @@ export class Orchestrator {
       ])
     }
 
+    this.deps.onTaskComplete?.({
+      agent: 'architect',
+      summary: `${this.plan.tasks.length} task(s) → ${roles.join(', ')}`,
+      toolCalls: [],
+      durationMs: archDuration,
+      status: 'done',
+    })
+
     await this.dispatch({ type: 'PLAN_READY' })
   }
 
@@ -372,11 +435,22 @@ export class Orchestrator {
   private async stepValidate(): Promise<void> {
     this.emit({ type: 'agent_start', agent: 'test', message: 'Running validation...' })
 
+    const testStart = Date.now()
     this.lastReport = await this.test.validate(this.spec!, this.deps.sandbox)
+    const testDuration = Date.now() - testStart
+
     await this.writeSandboxFile(
       'contracts/validation_report.json',
       JSON.stringify(this.lastReport, null, 2),
     )
+
+    this.deps.onTaskComplete?.({
+      agent: 'test',
+      summary: `validation ${this.lastReport.overall}`,
+      toolCalls: [],
+      durationMs: testDuration,
+      status: this.lastReport.overall === 'passed' ? 'done' : 'failed',
+    })
 
     if (this.lastReport.overall === 'passed') {
       this.ctx.previewUrl = this.deps.sandbox.getPreviewUrl(3000)
@@ -435,20 +509,27 @@ export class Orchestrator {
         this.emit({ type: 'task_status', taskId: task.id, status: 'in_progress' })
       }
 
-      const codes = await Promise.all(batch.map((task) => this.generateTaskCode(task)))
+      const results = await Promise.all(batch.map((task) => this.generateTaskCode(task)))
 
       try {
         for (let i = 0; i < batch.length; i++) {
           const task = batch[i]!
+          const result = results[i]!
           try {
-            await this.commitTask(task, codes[i]!)
+            await this.commitTask(task, result.code)
             task.status = 'done'
             this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
             // Non-blocking knowledge extraction
-            void this.extractKnowledge(task, codes[i]!)
+            void this.extractKnowledge(task, result.code)
+            this.deps.onTaskComplete?.(
+              this.buildStep(task.agent, result.events, result.durationMs, 'done'),
+            )
           } catch (err) {
             task.status = 'failed'
             this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
+            this.deps.onTaskComplete?.(
+              this.buildStep(task.agent, result.events, result.durationMs, 'failed'),
+            )
             throw err
           }
         }
@@ -472,22 +553,29 @@ export class Orchestrator {
         this.emit({ type: 'task_status', taskId: task.id, status: 'in_progress' })
       }
 
-      const codes = await Promise.all(
+      const results = await Promise.all(
         tasks.map((task) => this.generateTaskCode(task, instruction.errorContext)),
       )
 
       try {
         for (let i = 0; i < tasks.length; i++) {
           const task = tasks[i]!
+          const result = results[i]!
           try {
-            await this.commitTask(task, codes[i]!)
+            await this.commitTask(task, result.code)
             task.status = 'done'
             this.emit({ type: 'task_status', taskId: task.id, status: 'done' })
             // Non-blocking knowledge extraction
-            void this.extractKnowledge(task, codes[i]!)
+            void this.extractKnowledge(task, result.code)
+            this.deps.onTaskComplete?.(
+              this.buildStep(task.agent, result.events, result.durationMs, 'done'),
+            )
           } catch (err) {
             task.status = 'failed'
             this.emit({ type: 'task_status', taskId: task.id, status: 'failed' })
+            this.deps.onTaskComplete?.(
+              this.buildStep(task.agent, result.events, result.durationMs, 'failed'),
+            )
             throw err
           }
         }
@@ -540,9 +628,9 @@ Output [] if nothing is genuinely reusable. Be selective — quality over quanti
   }
 
   /** Phase 1: generate code for a task (LLM call, safe to run in parallel). */
-  private async generateTaskCode(task: PlanTask, errorContext?: string): Promise<string> {
+  private async generateTaskCode(task: PlanTask, errorContext?: string): Promise<{ code: string; events: ProgressEvent[]; durationMs: number }> {
     const agent = this.builders[task.agent]
-    if (!agent) return ''
+    if (!agent) return { code: '', events: [], durationMs: 0 }
 
     const context = await this.readRelevantContext(task.agent)
     const existingContent = task.action === 'modify'
@@ -555,12 +643,19 @@ Output [] if nothing is genuinely reusable. Be selective — quality over quanti
 
     const spawnFn: SpawnTaskFn = (params) => this.spawnTask(params)
 
-    return agent.executeTask(
+    const taskEvents: ProgressEvent[] = []
+    const taskEmit = (e: ProgressEvent) => {
+      taskEvents.push(e)
+      this.deps.onEvent(e)
+    }
+    const startedAt = Date.now()
+    const code = await agent.executeTask(
       { task: taskWithContext, projectContext: context, existingFileContent: existingContent, userID: this.deps.userID, projectId: this.ctx.projectId },
-      this.deps.onEvent,
+      taskEmit,
       this.deps.sandbox,
       spawnFn,
     )
+    return { code, events: taskEvents, durationMs: Date.now() - startedAt }
   }
 
   /** Phase 2: update shared context (must run sequentially, file writes done by agent tools). */
