@@ -43,7 +43,11 @@ export class ScenarioRunner {
       stepReports.push({ name: step.name, status, duration, checkpoints, logs })
     }
 
-    await scenario.teardown?.(ctx)
+    try {
+      await scenario.teardown?.(ctx)
+    } catch {
+      // teardown errors don't suppress the report
+    }
 
     const overallStatus = stepReports.some((s) => s.status === 'failed') ? 'failed' : 'passed'
     return {
