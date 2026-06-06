@@ -1,7 +1,25 @@
 import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
+import { generateText, tool, zodSchema, type ToolParameters } from 'ai'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import type { ZodType } from 'zod'
+
+/**
+ * Wraps ai.tool() to fix Zod v3 + ai v6 incompatibility.
+ * ai v6 uses tool.inputSchema but tool() only sets tool.parameters for Zod v3.
+ * This wrapper copies zodSchema(parameters) → inputSchema so the SDK sends correct schemas.
+ */
+export function createTool<P extends ZodType<any>>(config: {
+  description: string
+  parameters: P
+  execute: (params: P['_output']) => Promise<unknown>
+}) {
+  const t = tool(config as Parameters<typeof tool>[0])
+  if (!t.inputSchema && config.parameters) {
+    (t as Record<string, unknown>)['inputSchema'] = zodSchema(config.parameters)
+  }
+  return t
+}
 
 const provider = createOpenAI({
   apiKey: process.env['OPENAI_API_KEY'] ?? '',
@@ -16,7 +34,8 @@ export const MODEL = process.env['OPENAI_MODEL'] ?? 'gpt-4o'
 export const BUILDER_MODEL = process.env['OPENAI_BUILDER_MODEL'] ?? 'gpt-4o'
 
 // Use .chat() to force /v1/chat/completions — provider() defaults to /v1/responses in v3
-export const anthropic = provider.chat
+// Pass strictJsonSchema:false so tool parameter schemas are sent as-is (DeepSeek rejects strict mode)
+export const anthropic = (model: string) => provider.chat(model, { strictJsonSchema: false })
 
 /** generateText with higher retry count to handle relay node flapping.
  *  When FORGE_USE_STUB=true, returns a fixture instead of calling the LLM. */

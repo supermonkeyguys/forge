@@ -20,9 +20,8 @@
  *   fix path:     read(1) → write(1) → tsc(1) → str_replace(1) → tsc(1) = 5 steps
  */
 
-import { tool } from 'ai'
 import { llmText as generateText } from '../../lib/ai-client.js'
-import { anthropic, BUILDER_MODEL as MODEL } from '../../lib/ai-client.js'
+import { anthropic, BUILDER_MODEL as MODEL, createTool } from '../../lib/ai-client.js'
 import { fetchTopMemories, saveMemory, buildMemoryContext } from '../../lib/agent-memory-client.js'
 import {
   fetchPrinciples,
@@ -71,7 +70,7 @@ function buildTools(
   projectId?: string,
 ) {
   return {
-    read_file: tool({
+    read_file: createTool({
       description: 'Read a file from the sandbox. Use this to inspect existing code before modifying it.',
       parameters: z.object({
         path: z.string().describe('File path relative to /home/user/app, e.g. "packages/core/auth/use-login.ts"'),
@@ -87,7 +86,7 @@ function buildTools(
       },
     }),
 
-    write_file: tool({
+    write_file: createTool({
       description: 'Write a new file to the sandbox. Use for creating files that do not exist yet. For existing files, prefer str_replace.',
       parameters: z.object({
         path: z.string().describe('File path relative to /home/user/app'),
@@ -105,7 +104,7 @@ function buildTools(
       },
     }),
 
-    str_replace: tool({
+    str_replace: createTool({
       description: 'Replace an exact string in an existing file. More precise than rewriting the whole file. The old_str must match exactly including whitespace.',
       parameters: z.object({
         path: z.string().describe('File path relative to /home/user/app'),
@@ -133,7 +132,7 @@ function buildTools(
       },
     }),
 
-    tsc_check: tool({
+    tsc_check: createTool({
       description: 'Run TypeScript compiler check (tsc --noEmit) to verify there are no type errors. Always call this after writing or modifying TypeScript files.',
       parameters: z.object({}),
       execute: async () => {
@@ -148,7 +147,7 @@ function buildTools(
       },
     }),
 
-    remember: tool({
+    remember: createTool({
       description: 'Save a piece of information to your private memory for use in future tasks.',
       parameters: z.object({
         key:     z.string().describe('Topic label, e.g. "style_preference" or "learned_pattern"'),
@@ -161,7 +160,7 @@ function buildTools(
       },
     }),
 
-    recall: tool({
+    recall: createTool({
       description: 'Search your private memory for information relevant to the current task.',
       parameters: z.object({
         query: z.string().describe('What you want to recall'),
@@ -177,7 +176,7 @@ function buildTools(
       },
     }),
 
-    search_kb: tool({
+    search_kb: createTool({
       description: 'Search the company knowledge base for information relevant to the current task.',
       parameters: z.object({
         query: z.string().describe('What you want to find in the company knowledge base'),
@@ -189,7 +188,7 @@ function buildTools(
       },
     }),
 
-    save_to_kb: tool({
+    save_to_kb: createTool({
       description: 'Save important company-level information to the shared knowledge base.',
       parameters: z.object({
         title:   z.string(),
@@ -209,7 +208,7 @@ function buildTools(
 
     ...(spawnFn && currentTaskId !== undefined && currentDepth !== undefined
       ? {
-          spawn_task: tool({
+          spawn_task: createTool({
             description:
               'Spawn a sub-task to generate a file you need but that does not exist yet. ' +
               'The spawned agent runs immediately and you will be notified when it completes. ' +
