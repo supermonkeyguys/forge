@@ -24,3 +24,6 @@ server/bin/
 .idea/
 .vscode/
 .worktrees/
+
+# Generated reports
+e2e/reports/*.md
