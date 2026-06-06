@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-agent dev-web setup check test-go test-ts lint-go lint-ts db-up db-down db-migrate
+.PHONY: dev dev-api dev-agent dev-web setup check test-go test-ts lint-go lint-ts db-up db-down db-migrate test-harness scenario
 
 # ── Dev ──────────────────────────────────────────────────────────
 
@@ -70,6 +70,12 @@ test-ts:
 
 test-e2e:
 	pnpm exec playwright test
+
+test-harness:
+	pnpm test:harness
+
+scenario:
+	FORGE_USE_STUB=true pnpm scenario $(name)
 
 verify-sandbox:
 	cd apps/agent && npm run verify:sandbox
