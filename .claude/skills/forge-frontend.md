@@ -79,7 +79,8 @@ function GlassCard({ children, className }: { children: React.ReactNode; classNa
 - sidebar 宽度固定 `w-[52px]`，不可伸缩
 - 页面内容区 `flex flex-1 flex-col overflow-hidden`
 - **不要** 在 AppShell 内的页面组件里自己写 `h-screen`，用 `flex flex-1 min-h-0` 依赖 AppShell 撑满
-- `min-h-0` 不可省略：flex item 默认 `min-height: auto`，不加会导致 grid 子元素的 `h-full` 无法解析，overflow 不生效
+- `min-h-0` 不可省略：flex item 默认 `min-height: auto`，不加会导致高度不受约束
+- grid 需加 `[grid-template-rows:1fr]`：auto row 高度不是"确定值"，grid 子元素的 `h-full` 无法解析，内部 ScrollArea / flex-1 全部失效
 - 例外：`/login` 等 public 路由不经过 AppShell，可以用 `h-screen`
 
 ### 页面高度铺满
