@@ -10,6 +10,7 @@ export { useProjects, useProject, useCreateProject, useDeleteProject } from './p
 // Task / Agent events
 export { useAgentEvents } from './task/use-agent-events.ts'
 export { useTask, useCreateTask } from './task/use-tasks.ts'
+export { useTaskSteps, type TaskStep } from './task/use-task-steps.ts'
 
 // Workspace store (moved from apps/web to packages/core)
 export {

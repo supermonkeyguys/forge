@@ -5,8 +5,10 @@ import {
   selectOrchestratorState,
   selectPhase,
   selectEvents,
+  selectProjectId,
   type AgentCardState,
 } from '../../../store/workspace-store'
+import { useTaskSteps, type TaskStep } from '@forge/core'
 import type { AgentRole } from '@forge/core'
 import { ScrollArea } from '../../../components/ui/scroll-area'
 import { cn } from '../../../lib/utils'
@@ -31,6 +33,13 @@ export function AgentFlowPanel() {
   const orchState = useWorkspaceStore(selectOrchestratorState)
   const agentCards = useWorkspaceStore(selectAgentCards)
   const events = useWorkspaceStore(selectEvents)
+  const projectId = useWorkspaceStore(selectProjectId)
+  const { data: steps = [] } = useTaskSteps(
+    projectId,
+    phase === 'done' || phase === 'error',
+  )
+  const stepByAgent = (role: string): TaskStep | undefined =>
+    steps.find((s) => s.agent === role)
   const [logOpen, setLogOpen] = useState(false)
   const [selectedRole, setSelectedRole] = useState<string | null>(null)
 
@@ -89,6 +98,7 @@ export function AgentFlowPanel() {
               <div key={card.role} className="animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
                 <AgentCard
                   card={card}
+                  step={stepByAgent(card.role)}
                   isSelected={selectedRole === card.role}
                   onClick={() => setSelectedRole(card.role === selectedRole ? null : card.role)}
                 />
@@ -173,21 +183,27 @@ function OrchestratorBar({ state, phase, onMock }: { state: string | null; phase
 
 function AgentCard({
   card,
+  step,
   isSelected,
   onClick,
 }: {
   card: AgentCardState
+  step?: TaskStep
   isSelected: boolean
   onClick: () => void
 }) {
   const meta = AGENT_META[card.role] ?? { label: card.role, icon: Icons.Bot, description: '' }
   const isInteractive = card.status !== 'idle'
 
-  const elapsed = card.startedAt && card.finishedAt
+  const elapsed = step
+    ? (step.durationMs / 1000).toFixed(1) + 's'
+    : card.startedAt && card.finishedAt
     ? ((card.finishedAt - card.startedAt) / 1000).toFixed(1) + 's'
     : card.startedAt
     ? Math.floor((Date.now() - card.startedAt) / 1000) + 's'
     : null
+
+  const displayAction = step ? step.summary : card.currentAction
 
   return (
     <div
@@ -251,8 +267,8 @@ function AgentCard({
       {/* Progress bar */}
       <ProgressBar status={card.status} />
 
-      {/* Current action */}
-      {card.currentAction && (
+      {/* Current action / step summary */}
+      {displayAction && (
         <p className={cn(
           'mt-2.5 truncate text-[11px]',
           card.status === 'running' ? 'text-primary' :
@@ -260,7 +276,7 @@ function AgentCard({
           card.status === 'error'   ? 'text-destructive' :
           'text-muted-foreground',
         )}>
-          {card.currentAction}
+          {displayAction}
         </p>
       )}
 
