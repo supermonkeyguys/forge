@@ -6,7 +6,7 @@ import { loadNextjsTemplate } from './sandbox/template-loader.js'
 import type { OrchestratorState, OrchestratorContext } from './orchestrator/state-machine.js'
 import type { ProgressEvent } from './agents/types.js'
 import type { DraftSpec } from './agents/pm-agent.js'
-import { notifyGoAPI } from './lib/go-api-client.js'
+import { notifyGoAPI, writeTaskStep } from './lib/go-api-client.js'
 import { createProjectContextClient } from './lib/project-context-client.js'
 import { jobStore, type Job } from './job-store.js'
 import type { CustomAgentConfig } from './agents/builder/custom-agent.js'
@@ -78,6 +78,7 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
     agentOverrides = await resolveAgentOverrides(job.agentOverrides)
   }
 
+  let stepSeq = 0
   const orc = new Orchestrator(job.projectId, userInput, {
     sandbox: sandboxAdapter,
     agentOverrides,
@@ -115,6 +116,22 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
 
     onEvent: (event: ProgressEvent) => {
       jobStore.pushEvent(job.id, event)
+    },
+
+    onTaskComplete: (step) => {
+      if (!job.taskId) return
+      const seqNo = stepSeq++
+      writeTaskStep({
+        taskId: job.taskId,
+        seqNo,
+        agent: step.agent,
+        summary: step.summary,
+        toolCalls: step.toolCalls,
+        durationMs: step.durationMs,
+        status: step.status,
+      }).catch((err: unknown) => {
+        console.error('[onTaskComplete] step write failed after retries:', err)
+      })
     },
   })
 
