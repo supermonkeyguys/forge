@@ -70,6 +70,7 @@ func main() {
 		Agent:         agentHandler,
 		Memory:        memoryHandler,
 		KB:            pkbHandler,
+		TaskStep:      handler.NewTaskStepHandler(taskRepo, taskStepRepo),
 		InternalToken: cfg.InternalToken,
 		JWTSecret:     cfg.JWTSecret,
 		Logger:        logger,

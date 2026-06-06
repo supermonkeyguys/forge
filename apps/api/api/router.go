@@ -23,6 +23,7 @@ type RouterDeps struct {
 	Agent         *handler.AgentHandler
 	Memory        *handler.AgentMemoryHandler
 	KB            *handler.ProjectKBHandler
+	TaskStep      *handler.TaskStepHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -82,6 +83,9 @@ func NewRouter(deps RouterDeps) http.Handler {
 					r.Post("/", deps.Task.Create)
 					r.Get("/latest", deps.Task.Latest)
 					r.Get("/latest/events", deps.Task.LatestEvents)
+					if deps.TaskStep != nil {
+						r.Get("/latest/steps", deps.TaskStep.LatestSteps)
+					}
 					r.Get("/{taskID}", deps.Task.Get)
 				})
 			})
