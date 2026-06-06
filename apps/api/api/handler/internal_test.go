@@ -54,6 +54,28 @@ func TestInternalHandler_UpdateTaskStatus_Success(t *testing.T) {
 	}
 }
 
+func TestInternalHandler_UpdateTaskStatus_AbortedNormalisedToFailed(t *testing.T) {
+	var savedStatus domain.TaskStatus
+	taskRepo := &mock.TaskRepo{
+		UpdateStatusFn: func(_ context.Context, id string, status domain.TaskStatus, previewURL, errorMsg string) (domain.Task, error) {
+			savedStatus = status
+			return domain.Task{ID: id, Status: status}, nil
+		},
+	}
+	h := handler.NewInternalHandler(taskRepo, nil, nil, nil, nil, nil)
+	body, _ := json.Marshal(map[string]string{"status": "aborted"})
+	req := httptest.NewRequest(http.MethodPatch, "/internal/tasks/task-1/status", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	internalRouter(h).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if savedStatus != domain.TaskStatusFailed {
+		t.Fatalf("expected aborted to normalise to failed, got %s", savedStatus)
+	}
+}
+
 func TestInternalHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
 	h := handler.NewInternalHandler(&mock.TaskRepo{}, nil, nil, nil, nil, nil)
 	body, _ := json.Marshal(map[string]string{"status": "invalid-state"})

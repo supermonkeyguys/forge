@@ -50,6 +50,12 @@ func (h *InternalHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reques
 		middleware.WriteFieldError(w, "body", "invalid JSON")
 		return
 	}
+	// Orchestrator uses "aborted" as its terminal failure state; normalise to "failed"
+	// so it maps to a valid task_status/project_status enum value.
+	if body.Status == "aborted" {
+		body.Status = string(domain.TaskStatusFailed)
+	}
+
 	if !domain.ValidTaskStatus(body.Status) {
 		middleware.WriteFieldError(w, "status", "invalid task status: "+body.Status)
 		return
