@@ -217,6 +217,11 @@ export function useAgentEvents(projectId: string | null): void {
             if (job.error) setErrorMsg(job.error)
             markRunningCardsError(job.error ?? 'Task failed')
           }
+          // Restore from DB to get taskPrompt and any persisted events
+          if (!restoredFromDB) {
+            restoredFromDB = true
+            await restoreFromDB()
+          }
           active = false
         } else {
           scheduleNext()
