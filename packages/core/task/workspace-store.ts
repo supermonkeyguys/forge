@@ -146,7 +146,14 @@ export const useWorkspaceStore = create<WorkspaceState>()((set) => ({
   setAgentJobId: (jobId) => set({ agentJobId: jobId }),
 
   startGeneration: (projectId) =>
-    set({ projectId, phase: 'running', agentCards: initialCards(), events: [] }),
+    set((s) => ({
+      projectId,
+      phase: 'running',
+      agentCards: initialCards(),
+      events: [],
+      // Preserve prompt for retry button: use current userInput or keep existing taskPrompt
+      taskPrompt: s.userInput || s.taskPrompt,
+    })),
 
   setPreviewUrl: (url) => set({ previewUrl: url, phase: 'done' }),
 
