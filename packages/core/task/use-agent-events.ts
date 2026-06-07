@@ -73,6 +73,7 @@ export function useAgentEvents(projectId: string | null): void {
     if (!projectId) return
 
     let sinceIndex = 0
+    let lastSeenJobId: string | null = null
     let active = true
     let draftShown = false
     let restoredFromDB = false
@@ -151,8 +152,12 @@ export function useAgentEvents(projectId: string | null): void {
           return
         }
 
-        // Store job ID on first contact
-        if (sinceIndex === 0) setAgentJobId(job.id)
+        // Sync job ID — always update when job changes (e.g. after agent restart)
+        if (job.id !== lastSeenJobId) {
+          lastSeenJobId = job.id
+          setAgentJobId(job.id)
+          if (sinceIndex > 0) sinceIndex = 0 // reset event cursor for new job
+        }
 
         sinceIndex = job.totalEvents
 
