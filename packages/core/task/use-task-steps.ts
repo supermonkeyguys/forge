@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client.ts'
+import { useAuthStore, selectToken } from '../auth/auth-store.ts'
 
 export interface TaskStep {
   id: string
@@ -14,15 +15,18 @@ export interface TaskStep {
 }
 
 export function useTaskSteps(projectId: string | null, enabled: boolean) {
+  const token = useAuthStore(selectToken)
+
   return useQuery<TaskStep[]>({
     queryKey: ['task-steps', projectId],
     queryFn: async (): Promise<TaskStep[]> => {
       const res = await api.get<TaskStep[]>(
         `/api/v1/projects/${projectId}/tasks/latest/steps`,
+        token ?? undefined,
       )
       return res.data ?? []
     },
-    enabled: !!projectId && enabled,
+    enabled: !!projectId && enabled && !!token,
     staleTime: Infinity,
   })
 }
