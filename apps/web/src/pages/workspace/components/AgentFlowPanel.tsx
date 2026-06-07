@@ -193,7 +193,12 @@ function AgentCard({
   onClick: () => void
 }) {
   const meta = AGENT_META[card.role] ?? { label: card.role, icon: Icons.Bot, description: '' }
-  const isInteractive = card.status !== 'idle'
+  // When step data is loaded from DB, use its status instead of the live card state
+  const effectiveStatus: AgentCardState['status'] = step
+    ? (step.status === 'done' ? 'done' : step.status === 'failed' ? 'error' : card.status)
+    : card.status
+
+  const isInteractive = effectiveStatus !== 'idle'
 
   const elapsed = step
     ? (step.durationMs / 1000).toFixed(1) + 's'
@@ -214,10 +219,10 @@ function AgentCard({
       className={cn(
         'group relative overflow-hidden rounded-xl border bg-card/60 p-4 backdrop-blur-sm transition-all duration-300',
         // Base border
-        !isSelected && card.status === 'idle'     && 'border-border/40',
-        !isSelected && card.status === 'running'  && 'border-primary/40 shadow-lg shadow-primary/5',
-        !isSelected && card.status === 'done'     && 'border-green-500/30',
-        !isSelected && card.status === 'error'    && 'border-destructive/40',
+        !isSelected && effectiveStatus === 'idle'     && 'border-border/40',
+        !isSelected && effectiveStatus === 'running'  && 'border-primary/40 shadow-lg shadow-primary/5',
+        !isSelected && effectiveStatus === 'done'     && 'border-green-500/30',
+        !isSelected && effectiveStatus === 'error'    && 'border-destructive/40',
         // Selected ring
         isSelected && 'border-primary ring-2 ring-primary/30',
         // Hover — only for interactive cards
@@ -226,10 +231,10 @@ function AgentCard({
       )}
     >
       {/* Active / done indicator line */}
-      {card.status === 'running' && (
+      {effectiveStatus === 'running' && (
         <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent" />
       )}
-      {card.status === 'done' && (
+      {effectiveStatus === 'done' && (
         <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-green-500/60 to-transparent" />
       )}
 
@@ -245,9 +250,9 @@ function AgentCard({
       <div className="mb-3 flex items-center gap-3">
         <meta.icon className={cn(
           'h-5 w-5 shrink-0 transition-colors duration-200',
-          card.status === 'running' ? 'text-primary' :
-          card.status === 'done'    ? 'text-green-400' :
-          card.status === 'error'   ? 'text-destructive' :
+          effectiveStatus === 'running' ? 'text-primary' :
+          effectiveStatus === 'done'    ? 'text-green-400' :
+          effectiveStatus === 'error'   ? 'text-destructive' :
           'text-muted-foreground',
         )} />
         <div className="min-w-0 flex-1">
@@ -255,25 +260,25 @@ function AgentCard({
           <div className="text-[11px] text-muted-foreground/70">{meta.description}</div>
         </div>
         <div className="flex items-center gap-1.5">
-          {card.status === 'running' && (
+          {effectiveStatus === 'running' && (
             <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
           )}
-          {card.status === 'done' && <Icons.Check className="h-4 w-4 text-green-400" />}
-          {card.status === 'error' && <Icons.X className="h-4 w-4 text-destructive" />}
+          {effectiveStatus === 'done' && <Icons.Check className="h-4 w-4 text-green-400" />}
+          {effectiveStatus === 'error' && <Icons.X className="h-4 w-4 text-destructive" />}
           {elapsed && <span className="font-mono text-[10px] text-muted-foreground/60">{elapsed}</span>}
         </div>
       </div>
 
       {/* Progress bar */}
-      <ProgressBar status={card.status} />
+      <ProgressBar status={effectiveStatus} />
 
       {/* Current action / step summary */}
       {displayAction && (
         <p className={cn(
           'mt-2.5 truncate text-[11px]',
-          card.status === 'running' ? 'text-primary' :
-          card.status === 'done'    ? 'text-green-400' :
-          card.status === 'error'   ? 'text-destructive' :
+          effectiveStatus === 'running' ? 'text-primary' :
+          effectiveStatus === 'done'    ? 'text-green-400' :
+          effectiveStatus === 'error'   ? 'text-destructive' :
           'text-muted-foreground',
         )}>
           {displayAction}

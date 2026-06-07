@@ -38,6 +38,7 @@ export function useAgentEvents(projectId: string | null): void {
   const setPreviewUrl = useWorkspaceStore((s) => s.setPreviewUrl)
   const setWaiting = useWorkspaceStore((s) => s.setWaiting)
   const setErrorMsg = useWorkspaceStore((s) => s.setErrorMsg)
+  const setTaskPrompt = useWorkspaceStore((s) => s.setTaskPrompt)
   const setDraftSpec = useWorkspaceStore((s) => s.setDraftSpec)
   const setAgentJobId = useWorkspaceStore((s) => s.setAgentJobId)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
@@ -84,7 +85,7 @@ export function useAgentEvents(projectId: string | null): void {
         })
         if (!res.ok) return
         const { data: task } = await res.json() as {
-          data: { status: string; previewUrl: string; eventsJson: string; errorMsg?: string } | null
+          data: { status: string; previewUrl: string; eventsJson: string; errorMsg?: string; prompt?: string } | null
         }
         if (!task) return
 
@@ -92,6 +93,7 @@ export function useAgentEvents(projectId: string | null): void {
         const mapped = STATUS_MAP[task.status]
         if (mapped) setOrchestratorState(mapped)
         if (task.status === 'done' && task.previewUrl) setPreviewUrl(task.previewUrl)
+        if (task.prompt) setTaskPrompt(task.prompt)
         if (task.status === 'failed') {
           setPhase('error')
           if (task.errorMsg) setErrorMsg(task.errorMsg)
@@ -238,7 +240,7 @@ export function useAgentEvents(projectId: string | null): void {
       if (nextPollId !== null) clearTimeout(nextPollId)
       document.removeEventListener('visibilitychange', handleVisible)
     }
-  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setErrorMsg, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
+  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setErrorMsg, setTaskPrompt, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
 }
 
 

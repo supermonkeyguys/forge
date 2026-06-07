@@ -19,6 +19,7 @@ export {
   selectOrchestratorState,
   selectWaitingReason,
   selectErrorMsg,
+  selectTaskPrompt,
   selectAgentJobId,
 } from '@forge/core'
 

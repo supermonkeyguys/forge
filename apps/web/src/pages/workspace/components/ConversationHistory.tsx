@@ -5,9 +5,12 @@ import {
   selectOrchestratorState,
   selectWaitingReason,
   selectErrorMsg,
+  selectTaskPrompt,
+  selectProjectId,
   selectEvents,
   selectAgentJobId,
 } from '../../../store/workspace-store'
+import { useCreateTask } from '@forge/core'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { ScrollArea } from '../../../components/ui/scroll-area'
@@ -20,9 +23,13 @@ export function ConversationHistory() {
   const orchState = useWorkspaceStore(selectOrchestratorState)
   const waitingReason = useWorkspaceStore(selectWaitingReason)
   const errorMsg = useWorkspaceStore(selectErrorMsg)
+  const taskPrompt = useWorkspaceStore(selectTaskPrompt)
+  const projectId = useWorkspaceStore(selectProjectId)
   const events = useWorkspaceStore(selectEvents)
   const agentJobId = useWorkspaceStore(selectAgentJobId)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
+  const startGeneration = useWorkspaceStore((s) => s.startGeneration)
+  const { mutate: createTask, isPending: isRetrying } = useCreateTask(projectId ?? '')
   const [iterationInput, setIterationInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -87,10 +94,25 @@ export function ConversationHistory() {
 
       {/* Error banner */}
       {phase === 'error' && (
-        <div className="mx-4 mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive space-y-0.5">
+        <div className="mx-4 mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive space-y-1.5">
           <p className="font-medium">任务执行失败</p>
           {errorMsg && <p className="text-destructive/80">{errorMsg}</p>}
-          {!errorMsg && <p className="text-destructive/70">查看下方日志了解详情，或重新发起任务。</p>}
+          {!errorMsg && <p className="text-destructive/70">查看下方日志了解详情。</p>}
+          {taskPrompt && projectId && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 border-destructive/40 bg-destructive/5 text-xs text-destructive hover:bg-destructive/20"
+              disabled={isRetrying}
+              onClick={() => {
+                createTask(taskPrompt, {
+                  onSuccess: () => startGeneration(projectId),
+                })
+              }}
+            >
+              {isRetrying ? '重新发起中...' : '重新发起'}
+            </Button>
+          )}
         </div>
       )}
 

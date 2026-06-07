@@ -87,6 +87,7 @@ interface WorkspaceState {
   // ── Waiting state ────────────────────────────────────────────
   waitingReason: string | null
   errorMsg: string | null
+  taskPrompt: string | null
 
   // ── Agent Service job ─────────────────────────────────────────────
   agentJobId: string | null
@@ -97,6 +98,7 @@ interface WorkspaceState {
   setPreviewUrl: (url: string) => void
   setWaiting: (reason: string) => void
   setErrorMsg: (msg: string) => void
+  setTaskPrompt: (prompt: string) => void
   reset: () => void
 }
 
@@ -125,6 +127,7 @@ const initialState = {
   agentCards: initialCards(),
   waitingReason: null,
   errorMsg: null,
+  taskPrompt: null,
   agentJobId: null,
 }
 
@@ -148,6 +151,7 @@ export const useWorkspaceStore = create<WorkspaceState>()((set) => ({
 
   setWaiting: (reason) => set({ phase: 'waiting', waitingReason: reason }),
   setErrorMsg: (msg) => set({ errorMsg: msg }),
+  setTaskPrompt: (prompt) => set({ taskPrompt: prompt }),
 
   reset: () => set({ ...initialState, agentCards: initialCards() }),
 
@@ -203,4 +207,5 @@ export const selectEvents = (s: WorkspaceState) => s.events
 export const selectOrchestratorState = (s: WorkspaceState) => s.orchestratorState
 export const selectWaitingReason = (s: WorkspaceState) => s.waitingReason
 export const selectErrorMsg = (s: WorkspaceState) => s.errorMsg
+export const selectTaskPrompt = (s: WorkspaceState) => s.taskPrompt
 export const selectAgentJobId = (s: WorkspaceState) => s.agentJobId
