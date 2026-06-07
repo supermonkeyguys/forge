@@ -61,6 +61,7 @@ export function ConversationHistory() {
     fixing:     '修复问题中...',
     done:       '生成完成',
     waiting:    '需要你的介入',
+    failed:     '任务失败',
   }
 
   return (

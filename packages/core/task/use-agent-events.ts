@@ -29,6 +29,7 @@ const STATUS_MAP: Record<string, ProjectStatus> = {
   waiting:    'waiting',
   done:       'done',
   aborted:    'failed',
+  failed:     'failed',
 }
 
 export function useAgentEvents(projectId: string | null): void {
