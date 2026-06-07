@@ -4,6 +4,7 @@ import {
   selectPhase,
   selectOrchestratorState,
   selectWaitingReason,
+  selectErrorMsg,
   selectEvents,
   selectAgentJobId,
 } from '../../../store/workspace-store'
@@ -18,6 +19,7 @@ export function ConversationHistory() {
   const phase = useWorkspaceStore(selectPhase)
   const orchState = useWorkspaceStore(selectOrchestratorState)
   const waitingReason = useWorkspaceStore(selectWaitingReason)
+  const errorMsg = useWorkspaceStore(selectErrorMsg)
   const events = useWorkspaceStore(selectEvents)
   const agentJobId = useWorkspaceStore(selectAgentJobId)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
@@ -84,8 +86,10 @@ export function ConversationHistory() {
 
       {/* Error banner */}
       {phase === 'error' && (
-        <div className="mx-4 mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          任务执行失败。你可以查看下方日志了解详情，或重新发起任务。
+        <div className="mx-4 mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive space-y-0.5">
+          <p className="font-medium">任务执行失败</p>
+          {errorMsg && <p className="text-destructive/80">{errorMsg}</p>}
+          {!errorMsg && <p className="text-destructive/70">查看下方日志了解详情，或重新发起任务。</p>}
         </div>
       )}
 

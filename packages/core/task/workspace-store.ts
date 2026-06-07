@@ -86,6 +86,7 @@ interface WorkspaceState {
 
   // ── Waiting state ────────────────────────────────────────────
   waitingReason: string | null
+  errorMsg: string | null
 
   // ── Agent Service job ─────────────────────────────────────────────
   agentJobId: string | null
@@ -95,6 +96,7 @@ interface WorkspaceState {
   startGeneration: (projectId: string) => void
   setPreviewUrl: (url: string) => void
   setWaiting: (reason: string) => void
+  setErrorMsg: (msg: string) => void
   reset: () => void
 }
 
@@ -122,6 +124,7 @@ const initialState = {
   events: [],
   agentCards: initialCards(),
   waitingReason: null,
+  errorMsg: null,
   agentJobId: null,
 }
 
@@ -144,6 +147,7 @@ export const useWorkspaceStore = create<WorkspaceState>()((set) => ({
   setPreviewUrl: (url) => set({ previewUrl: url, phase: 'done' }),
 
   setWaiting: (reason) => set({ phase: 'waiting', waitingReason: reason }),
+  setErrorMsg: (msg) => set({ errorMsg: msg }),
 
   reset: () => set({ ...initialState, agentCards: initialCards() }),
 
@@ -198,4 +202,5 @@ export const selectAgentCards = (s: WorkspaceState) => s.agentCards
 export const selectEvents = (s: WorkspaceState) => s.events
 export const selectOrchestratorState = (s: WorkspaceState) => s.orchestratorState
 export const selectWaitingReason = (s: WorkspaceState) => s.waitingReason
+export const selectErrorMsg = (s: WorkspaceState) => s.errorMsg
 export const selectAgentJobId = (s: WorkspaceState) => s.agentJobId

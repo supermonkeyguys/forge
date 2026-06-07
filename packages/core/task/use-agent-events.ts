@@ -36,6 +36,7 @@ export function useAgentEvents(projectId: string | null): void {
   const addEvent = useWorkspaceStore((s) => s.addEvent)
   const setPreviewUrl = useWorkspaceStore((s) => s.setPreviewUrl)
   const setWaiting = useWorkspaceStore((s) => s.setWaiting)
+  const setErrorMsg = useWorkspaceStore((s) => s.setErrorMsg)
   const setDraftSpec = useWorkspaceStore((s) => s.setDraftSpec)
   const setAgentJobId = useWorkspaceStore((s) => s.setAgentJobId)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
@@ -82,16 +83,23 @@ export function useAgentEvents(projectId: string | null): void {
         })
         if (!res.ok) return
         const { data: task } = await res.json() as {
-          data: { status: string; previewUrl: string; eventsJson: string } | null
+          data: { status: string; previewUrl: string; eventsJson: string; errorMsg?: string } | null
         }
-        if (!task?.eventsJson || task.eventsJson === '[]') return
-        const events: AgentEvent[] = JSON.parse(task.eventsJson)
-        for (const event of events) addEvent(event)
+        if (!task) return
+
+        // Always apply terminal phase/state even when there are no events
         const mapped = STATUS_MAP[task.status]
         if (mapped) setOrchestratorState(mapped)
         if (task.status === 'done' && task.previewUrl) setPreviewUrl(task.previewUrl)
-        if (task.status === 'failed') setPhase('error')
+        if (task.status === 'failed') {
+          setPhase('error')
+          if (task.errorMsg) setErrorMsg(task.errorMsg)
+        }
         if (task.status === 'done') setPhase('done')
+
+        if (!task?.eventsJson || task.eventsJson === '[]') return
+        const events: AgentEvent[] = JSON.parse(task.eventsJson)
+        for (const event of events) addEvent(event)
       } catch { /* DB fallback unavailable, ignore */ }
     }
 
@@ -229,7 +237,7 @@ export function useAgentEvents(projectId: string | null): void {
       if (nextPollId !== null) clearTimeout(nextPollId)
       document.removeEventListener('visibilitychange', handleVisible)
     }
-  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
+  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setErrorMsg, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
 }
 
 

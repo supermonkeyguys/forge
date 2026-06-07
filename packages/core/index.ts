@@ -25,6 +25,7 @@ export {
   selectEvents,
   selectOrchestratorState,
   selectWaitingReason,
+  selectErrorMsg,
   selectAgentJobId,
 } from './task/workspace-store.ts'
 export type {
