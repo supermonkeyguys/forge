@@ -144,7 +144,11 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
     status: result.state,
     updatedAt: new Date().toISOString(),
   })
-  jobStore.setOrchestrator(job.id, null)
+  // Keep orchestrator alive in 'waiting' state so resume() can be called.
+  // Only detach on terminal states (done / aborted).
+  if (result.state !== 'waiting') {
+    jobStore.setOrchestrator(job.id, null)
+  }
 
   if (!useMock) {
     const realSandbox = sandbox as ForgeSandbox

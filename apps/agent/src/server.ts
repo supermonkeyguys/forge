@@ -180,13 +180,18 @@ async function handleResume(
   // Case 2: orchestrator is in WAITING state (retries exhausted)
   const orc = jobStore.getOrchestrator(jobId)
   if (job.status === 'waiting' && orc) {
-    orc.resume(userInput).catch((err) => {
-      jobStore.patch(jobId, {
-        status: 'aborted',
-        error: err instanceof Error ? err.message : String(err),
-        updatedAt: new Date().toISOString(),
+    orc.resume(userInput)
+      .then(() => {
+        jobStore.setOrchestrator(jobId, null)
       })
-    })
+      .catch((err) => {
+        jobStore.patch(jobId, {
+          status: 'aborted',
+          error: err instanceof Error ? err.message : String(err),
+          updatedAt: new Date().toISOString(),
+        })
+        jobStore.setOrchestrator(jobId, null)
+      })
     return send(res, 200, { data: { jobId, status: 'resumed' } })
   }
 
