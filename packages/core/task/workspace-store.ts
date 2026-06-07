@@ -99,6 +99,7 @@ interface WorkspaceState {
   setWaiting: (reason: string) => void
   setErrorMsg: (msg: string) => void
   setTaskPrompt: (prompt: string) => void
+  markRunningCardsError: (errorMsg: string) => void
   reset: () => void
 }
 
@@ -152,6 +153,15 @@ export const useWorkspaceStore = create<WorkspaceState>()((set) => ({
   setWaiting: (reason) => set({ phase: 'waiting', waitingReason: reason }),
   setErrorMsg: (msg) => set({ errorMsg: msg }),
   setTaskPrompt: (prompt) => set({ taskPrompt: prompt }),
+  markRunningCardsError: (errorMsg) => set((s) => {
+    const cards = { ...s.agentCards }
+    for (const [role, card] of Object.entries(cards)) {
+      if (card.status === 'running') {
+        cards[role] = { ...card, status: 'error', currentAction: errorMsg }
+      }
+    }
+    return { agentCards: cards }
+  }),
 
   reset: () => set({ ...initialState, agentCards: initialCards() }),
 

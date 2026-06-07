@@ -39,6 +39,7 @@ export function useAgentEvents(projectId: string | null): void {
   const setWaiting = useWorkspaceStore((s) => s.setWaiting)
   const setErrorMsg = useWorkspaceStore((s) => s.setErrorMsg)
   const setTaskPrompt = useWorkspaceStore((s) => s.setTaskPrompt)
+  const markRunningCardsError = useWorkspaceStore((s) => s.markRunningCardsError)
   const setDraftSpec = useWorkspaceStore((s) => s.setDraftSpec)
   const setAgentJobId = useWorkspaceStore((s) => s.setAgentJobId)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
@@ -134,6 +135,7 @@ export function useAgentEvents(projectId: string | null): void {
             status: string
             previewUrl: string | null
             waitingReason: string | null
+            error: string | null
             draft: Record<string, unknown> | null
             events: AgentEvent[]
             totalEvents: number
@@ -210,7 +212,11 @@ export function useAgentEvents(projectId: string | null): void {
         }
 
         if (TERMINAL_STATUSES.has(job.status)) {
-          if (job.status !== 'done') setPhase('error')
+          if (job.status !== 'done') {
+            setPhase('error')
+            if (job.error) setErrorMsg(job.error)
+            markRunningCardsError(job.error ?? 'Task failed')
+          }
           active = false
         } else {
           scheduleNext()
@@ -240,7 +246,7 @@ export function useAgentEvents(projectId: string | null): void {
       if (nextPollId !== null) clearTimeout(nextPollId)
       document.removeEventListener('visibilitychange', handleVisible)
     }
-  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setErrorMsg, setTaskPrompt, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
+  }, [projectId, token, addEvent, setPreviewUrl, setWaiting, setErrorMsg, setTaskPrompt, markRunningCardsError, setDraftSpec, setAgentJobId, setPhase, setOrchestratorState])
 }
 
 
