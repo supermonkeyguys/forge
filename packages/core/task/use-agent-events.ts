@@ -101,6 +101,10 @@ export function useAgentEvents(projectId: string | null): void {
           if (task.errorMsg) setErrorMsg(task.errorMsg)
         }
         if (task.status === 'done') setPhase('done')
+        if (task.status === 'waiting') {
+          // waitingReason is not persisted to DB — use errorMsg or a generic fallback
+          setWaiting(task.errorMsg || 'Validation could not complete automatically. Please provide guidance.')
+        }
 
         if (!task?.eventsJson || task.eventsJson === '[]') return
         const events: AgentEvent[] = JSON.parse(task.eventsJson)

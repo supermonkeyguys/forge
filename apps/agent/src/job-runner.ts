@@ -98,6 +98,8 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
         const extras = {
           ...(state === 'done'    ? { previewUrl: current.previewUrl ?? undefined } : {}),
           ...(state === 'aborted' ? { errorMsg:   current.error    ?? undefined } : {}),
+          // Persist waitingReason in errorMsg so it survives agent restarts
+          ...(state === 'waiting' && current.waitingReason ? { errorMsg: current.waitingReason } : {}),
           // Persist full event log on terminal state so the frontend can restore after restarts
           ...(isTerminal ? { events: current.events } : {}),
         }
