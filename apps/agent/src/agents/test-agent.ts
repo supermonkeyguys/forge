@@ -190,7 +190,12 @@ export class TestAgent implements Agent {
     })
 
     const raw = JSON.parse(extractJSON(text)) as { checks: unknown[] }
-    const object = z.object({ checks: z.array(CriterionCheckSchema) }).parse(raw)
+    // Inject criterion from input if LLM omitted it (common failure mode)
+    const withCriteria = (raw.checks ?? []).map((check, i) => ({
+      criterion: allCriteria[i]?.criterion ?? '',
+      ...(check as object),
+    }))
+    const object = z.object({ checks: z.array(CriterionCheckSchema) }).parse({ checks: withCriteria })
     return object.checks
   }
 
@@ -428,12 +433,13 @@ function buildCheckPlanPrompt(
 Acceptance criteria:
 ${list}
 
-For each criterion, output:
+Respond with a JSON object where each entry in "checks" has EXACTLY these fields:
+- criterion: copy the criterion text verbatim from the input list above
 - method: http_probe | visual | skip
-- url: the URL path to test (e.g. "/", "/api/projects", "/login")
-- expected_status: HTTP status code for http_probe (default 200)
-- expected_body_contains: optional string the body should contain
-- skip_reason: why it cannot be tested (for skip only)
+- url: the URL path to test (e.g. "/", "/api/projects", "/login") — null for visual/skip
+- expected_status: HTTP status code for http_probe (default 200) — null for visual/skip
+- expected_body_contains: optional string the body should contain — null if not needed
+- skip_reason: why it cannot be tested (for skip only) — null otherwise
 
 Be pragmatic — prefer http_probe for API endpoints, visual for UI elements.`
 }
