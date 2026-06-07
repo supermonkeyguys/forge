@@ -7,13 +7,28 @@
 
 import { z } from 'zod'
 
-export const AgentRoleSchema = z.enum([
-  'schema',  // database schema (prisma)
-  'logic',   // business logic + unit tests (packages/core + server/domain)
-  'api',     // HTTP route layer (app/api)
-  'ui',      // pure UI components (packages/ui)
-  'page',    // page assembly (app/**/page.tsx)
-])
+const VALID_AGENT_ROLES = ['schema', 'logic', 'api', 'ui', 'page'] as const
+
+// Map common LLM mistakes to the correct role
+const AGENT_ROLE_ALIASES: Record<string, typeof VALID_AGENT_ROLES[number]> = {
+  core:     'logic',  // packages/core → logic agent
+  backend:  'logic',
+  domain:   'logic',
+  infra:    'logic',
+  database: 'schema',
+  db:       'schema',
+  route:    'api',
+  routes:   'api',
+  component: 'ui',
+  layout:   'page',
+}
+
+export const AgentRoleSchema = z.string().transform((val) => {
+  if ((VALID_AGENT_ROLES as readonly string[]).includes(val)) {
+    return val as typeof VALID_AGENT_ROLES[number]
+  }
+  return AGENT_ROLE_ALIASES[val.toLowerCase()] ?? 'logic'
+}).pipe(z.enum(VALID_AGENT_ROLES))
 
 export const TaskActionSchema = z.enum(['create', 'modify', 'delete'])
 

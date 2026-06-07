@@ -19,9 +19,19 @@ BACKEND (within the generated Next.js app):
   server/infra/<name>-repo.ts              → DB repository implementations
   app/api/<route>/route.ts                  → HTTP thin layer
 
+AGENT ROLE → FILE PATH MAPPING (MANDATORY):
+  "schema" → prisma/schema.prisma, prisma/migrations/
+  "logic"  → packages/core/**/*.ts, server/domain/**/*.ts, server/infra/**/*.ts
+             (ALL packages/core files use "logic" — hooks, stores, tests)
+  "api"    → app/api/**/*.ts, app/api/**/route.ts
+  "ui"     → packages/ui/**/*.tsx, packages/ui/**/*.stories.tsx
+  "page"   → app/**/page.tsx, app/**/layout.tsx
+
+NEVER use agent values outside this list. "core" is NOT a valid agent — use "logic" instead.
+
 RULES:
-1. Every packages/core/ file MUST have a corresponding .test.ts task
-2. Every packages/ui/ component MUST have a .stories.tsx task
+1. Every packages/core/ file MUST have a corresponding .test.ts task — both use agent "logic"
+2. Every packages/ui/ component MUST have a .stories.tsx task — both use agent "ui"
 3. page.tsx files only need a task if a NEW page is required (not if it already exists)
 4. Respect depends_on: schema tasks must complete before logic tasks that query DB
 5. Be specific in description — the Builder Agent will use it as its sole instruction
