@@ -82,6 +82,13 @@ export function ConversationHistory() {
         </span>
       </div>
 
+      {/* Error banner */}
+      {phase === 'error' && (
+        <div className="mx-4 mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          任务执行失败。你可以查看下方日志了解详情，或重新发起任务。
+        </div>
+      )}
+
       {/* Event log */}
       <ScrollArea className="min-h-0 flex-1 px-6 py-4">
         <div className="flex flex-col gap-2">

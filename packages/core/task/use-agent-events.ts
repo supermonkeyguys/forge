@@ -90,6 +90,8 @@ export function useAgentEvents(projectId: string | null): void {
         const mapped = STATUS_MAP[task.status]
         if (mapped) setOrchestratorState(mapped)
         if (task.status === 'done' && task.previewUrl) setPreviewUrl(task.previewUrl)
+        if (task.status === 'failed') setPhase('error')
+        if (task.status === 'done') setPhase('done')
       } catch { /* DB fallback unavailable, ignore */ }
     }
 
@@ -197,6 +199,7 @@ export function useAgentEvents(projectId: string | null): void {
         }
 
         if (TERMINAL_STATUSES.has(job.status)) {
+          if (job.status !== 'done') setPhase('error')
           active = false
         } else {
           scheduleNext()
