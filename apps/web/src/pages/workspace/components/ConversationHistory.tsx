@@ -11,6 +11,7 @@ import {
   selectAgentJobId,
 } from '../../../store/workspace-store'
 import { useCreateTask } from '@forge/core'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { ScrollArea } from '../../../components/ui/scroll-area'
@@ -30,6 +31,7 @@ export function ConversationHistory() {
   const setPhase = useWorkspaceStore((s) => s.setPhase)
   const startGeneration = useWorkspaceStore((s) => s.startGeneration)
   const { mutate: createTask, isPending: isRetrying } = useCreateTask(projectId ?? '')
+  const queryClient = useQueryClient()
   const [iterationInput, setIterationInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -105,6 +107,7 @@ export function ConversationHistory() {
               className="h-7 border-destructive/40 bg-destructive/5 text-xs text-destructive hover:bg-destructive/20"
               disabled={isRetrying}
               onClick={() => {
+                queryClient.removeQueries({ queryKey: ['task-steps', projectId] })
                 createTask(taskPrompt, {
                   onSuccess: () => startGeneration(projectId),
                 })
