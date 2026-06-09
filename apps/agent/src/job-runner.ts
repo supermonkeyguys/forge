@@ -191,28 +191,38 @@ export async function runWorkflowJob(
 
   const worker = new WorkerAgent()
   const previousOutputs: Record<string, string> = {}
-  const steps = topoSortSteps(workflowDefinition.steps)
+  const layers = buildExecutionLayers(workflowDefinition.steps)
 
-  for (const step of steps) {
-    const ctx: RunContext = {
-      projectId: job.projectId,
-      jobId:     job.id,
-      stepId:    step.id,
-      emit:      (event) => jobStore.pushEvent(job.id, event as ProgressEvent),
-      previousOutputs,
+  for (const layer of layers) {
+    // All steps in this layer are independent — run them concurrently
+    const results = await Promise.all(
+      layer.map(step => {
+        const ctx: RunContext = {
+          projectId:       job.projectId,
+          jobId:           job.id,
+          stepId:          step.id,
+          emit:            (event) => jobStore.pushEvent(job.id, event as ProgressEvent),
+          previousOutputs: { ...previousOutputs },  // snapshot so parallel steps see same prior outputs
+        }
+        return worker.execute(step, ctx)
+      }),
+    )
+
+    // Collect outputs before moving to the next layer
+    for (const result of results) {
+      previousOutputs[result.stepId] = result.output
     }
 
-    const result = await worker.execute(step, ctx)
-    previousOutputs[step.id] = result.output
-
-    if (result.status === 'failed') {
+    // Abort if any step in this layer failed
+    const failed = results.find(r => r.status === 'failed')
+    if (failed) {
       jobStore.patch(job.id, {
         status:    'aborted',
-        error:     result.error ?? result.output,
+        error:     failed.error ?? failed.output,
         updatedAt: new Date().toISOString(),
       })
       if (job.taskId) {
-        await notifyWorkflowRun(job.taskId, 'aborted', result.error ?? undefined)
+        await notifyWorkflowRun(job.taskId, 'aborted', failed.error ?? undefined)
       }
       return
     }
@@ -224,20 +234,23 @@ export async function runWorkflowJob(
   }
 }
 
-function topoSortSteps(steps: WorkflowStep[]): WorkflowStep[] {
-  const byId = new Map(steps.map(s => [s.id, s]))
-  const visited = new Set<string>()
-  const result: WorkflowStep[] = []
+/**
+ * Groups steps into execution layers.
+ * Steps in the same layer have no dependency on each other and run in parallel.
+ * Layer N starts only after every step in layer N-1 has completed.
+ */
+function buildExecutionLayers(steps: WorkflowStep[]): WorkflowStep[][] {
+  const assigned = new Set<string>()
+  const layers: WorkflowStep[][] = []
 
-  function visit(id: string) {
-    if (visited.has(id)) return
-    visited.add(id)
-    const step = byId.get(id)
-    if (!step) return
-    for (const dep of step.depends_on) visit(dep)
-    result.push(step)
+  while (assigned.size < steps.length) {
+    const layer = steps.filter(
+      s => !assigned.has(s.id) && s.depends_on.every(dep => assigned.has(dep)),
+    )
+    if (layer.length === 0) break  // cycle guard
+    layers.push(layer)
+    for (const s of layer) assigned.add(s.id)
   }
 
-  for (const step of steps) visit(step.id)
-  return result
+  return layers
 }
