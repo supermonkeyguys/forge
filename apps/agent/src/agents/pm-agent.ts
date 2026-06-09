@@ -248,3 +248,60 @@ Rules:
 - acceptance_criteria must be specific and testable
 - Include 3-6 features minimum`
 }
+
+// ── Workflow Definition Generation ───────────────────────────────
+
+import type { WorkflowDefinition } from '../contracts/workflow.js'
+import { WorkflowDefinitionSchema } from '../contracts/workflow.js'
+
+/**
+ * 从用户描述生成 WorkflowDefinition（工作流模式，非代码生成模式）
+ */
+export async function generateWorkflowDefinition(
+  userInput: string,
+  clarifications: string[],
+): Promise<WorkflowDefinition> {
+  const context = clarifications.length > 0
+    ? `User clarifications:\n${clarifications.join('\n')}\n\n`
+    : ''
+
+  const { text } = await generateText({
+    model: anthropic(MODEL),
+    system: `You generate workflow definitions as JSON.
+Available capabilities: browser, http, llm, notify, code, file.
+Always respond with valid JSON only, no markdown.
+
+PARALLEL EXECUTION RULES — read carefully:
+- Steps with no dependency between them run IN PARALLEL (simultaneously).
+- A step's "depends_on" lists the IDs of steps that must COMPLETE before it can start.
+- If two steps are independent (neither needs the other's output), both have depends_on: [].
+- Only list a step in depends_on when you actually need its output as input to the current step.
+- Aim to maximise parallelism: if 3 steps can all start at once, all three get depends_on: [].`,
+    prompt: `${context}User request: ${userInput}
+
+Generate a WorkflowDefinition JSON. Think step-by-step:
+1. List all the work that needs to happen.
+2. For each piece of work, ask: does it need the OUTPUT of another step? If yes, add that step to depends_on. If no, depends_on stays [].
+3. Steps that can run at the same time MUST have non-overlapping depends_on so the runtime can parallelise them.
+
+Example — "fetch weather and stock price, then write a summary report":
+{
+  "steps": [
+    { "id": "s1", "name": "获取天气数据", "capability": "http", "instructions": "GET https://api.weather.com/...", "depends_on": [], "config": {} },
+    { "id": "s2", "name": "获取股票价格", "capability": "http", "instructions": "GET https://api.stock.com/...",   "depends_on": [], "config": {} },
+    { "id": "s3", "name": "生成汇总报告", "capability": "llm",  "instructions": "根据上两步的天气和股价数据生成一份简洁的日报", "depends_on": ["s1","s2"], "config": {} }
+  ]
+}
+
+Capability guide:
+- "browser" — UI interaction (web forms, navigation, clicking)
+- "http"    — API calls with a known URL
+- "llm"     — analysis, extraction, summarisation, writing
+- "notify"  — sending results via webhook or message
+- "code"    — building a software application (rare)
+- "file"    — reading or writing local files`,
+  })
+
+  const json = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? '{"steps":[]}')
+  return WorkflowDefinitionSchema.parse(json)
+}
