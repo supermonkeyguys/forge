@@ -15,6 +15,9 @@ import (
 	"github.com/forge-ai/forge/api/domain"
 )
 
+// agentHTTPClientLong is used for AI generation calls that can take 30-60s.
+var agentHTTPClientLong = &http.Client{Timeout: 90 * time.Second}
+
 // WorkflowRunHandler handles workflow generation and execution routes.
 type WorkflowRunHandler struct {
 	workflowRepo    domain.WorkflowRepository
@@ -64,7 +67,7 @@ func (h *WorkflowRunHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := agentHTTPClient.Do(req)
+	resp, err := agentHTTPClientLong.Do(req)
 	if err != nil {
 		middleware.WriteError(w, fmt.Errorf("agent unavailable: %w", err))
 		return
