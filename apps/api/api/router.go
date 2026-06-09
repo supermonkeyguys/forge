@@ -24,6 +24,8 @@ type RouterDeps struct {
 	Memory        *handler.AgentMemoryHandler
 	KB            *handler.ProjectKBHandler
 	TaskStep      *handler.TaskStepHandler
+	Workflow      *handler.WorkflowHandler
+	Capability    *handler.CapabilityHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -83,6 +85,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 					r.Post("/", deps.Task.Create)
 					r.Get("/latest", deps.Task.Latest)
 					r.Get("/latest/events", deps.Task.LatestEvents)
+					r.Post("/latest/complete", deps.Task.ForceComplete)
 					if deps.TaskStep != nil {
 						r.Get("/latest/steps", deps.TaskStep.LatestSteps)
 					}
@@ -128,6 +131,28 @@ func NewRouter(deps RouterDeps) http.Handler {
 					r.Put("/deprecate", deps.KB.Deprecate)
 					r.Delete("/", deps.KB.Delete)
 				})
+			})
+		}
+
+		// Workflows
+		if deps.Workflow != nil {
+			r.Route("/workflows", func(r chi.Router) {
+				r.Get("/", deps.Workflow.List)
+				r.Post("/", deps.Workflow.Create)
+				r.Get("/{workflowID}", deps.Workflow.Get)
+				r.Put("/{workflowID}", deps.Workflow.Update)
+				r.Delete("/{workflowID}", deps.Workflow.Delete)
+			})
+		}
+
+		// Capabilities
+		if deps.Capability != nil {
+			r.Route("/capabilities", func(r chi.Router) {
+				r.Get("/", deps.Capability.List)
+				r.Post("/", deps.Capability.Create)
+				r.Get("/{capabilityID}", deps.Capability.Get)
+				r.Put("/{capabilityID}", deps.Capability.Update)
+				r.Delete("/{capabilityID}", deps.Capability.Delete)
 			})
 		}
 

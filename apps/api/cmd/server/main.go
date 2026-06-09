@@ -46,6 +46,8 @@ func main() {
 	memoryRepo := postgres.NewAgentMemoryRepo(pool)
 	pkbRepo := postgres.NewProjectKBRepo(pool)
 	taskStepRepo := postgres.NewTaskStepRepo(pool)
+	workflowRepo := postgres.NewWorkflowRepo(pool)
+	capabilityRepo := postgres.NewCapabilityRepo(pool)
 
 	// 3. Build handlers (receive domain interfaces)
 	hasher := handler.BcryptHasher{}
@@ -58,6 +60,8 @@ func main() {
 	agentHandler := handler.NewAgentHandler(agentRepo)
 	memoryHandler := handler.NewAgentMemoryHandler(memoryRepo)
 	pkbHandler := handler.NewProjectKBHandlerWithAgent(pkbRepo, cfg.AgentServiceURL)
+	workflowHandler := handler.NewWorkflowHandler(workflowRepo)
+	capabilityHandler := handler.NewCapabilityHandler(capabilityRepo)
 
 	// 4. Assemble router
 	router := apiPkg.NewRouter(apiPkg.RouterDeps{
@@ -71,6 +75,8 @@ func main() {
 		Memory:        memoryHandler,
 		KB:            pkbHandler,
 		TaskStep:      handler.NewTaskStepHandler(taskRepo, taskStepRepo),
+		Workflow:      workflowHandler,
+		Capability:    capabilityHandler,
 		InternalToken: cfg.InternalToken,
 		JWTSecret:     cfg.JWTSecret,
 		Logger:        logger,

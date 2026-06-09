@@ -63,3 +63,19 @@ type ProjectKBRepository interface {
 	Delete(ctx context.Context, id, userID string) error
 	UpdateContent(ctx context.Context, id, content, status string) error
 }
+
+type WorkflowRepository interface {
+	Create(ctx context.Context, w Workflow) (Workflow, error)
+	GetByID(ctx context.Context, id string) (Workflow, error)
+	ListByUserID(ctx context.Context, userID string) ([]Workflow, error)
+	Update(ctx context.Context, w Workflow) (Workflow, error)
+	Delete(ctx context.Context, id string) error
+}
+
+type CapabilityRepository interface {
+	Create(ctx context.Context, c Capability) (Capability, error)
+	GetByID(ctx context.Context, id string) (Capability, error)
+	ListByUserID(ctx context.Context, userID string) ([]Capability, error)
+	Update(ctx context.Context, c Capability) (Capability, error)
+	Delete(ctx context.Context, id string) error
+}
