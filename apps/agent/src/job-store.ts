@@ -19,7 +19,7 @@ export interface Job {
   waitingReason: string | null
   agentOverrides?: Record<string, string>  // role → agent DB id
   userId?: string
-  jobType?: 'build' | 'kb_ingest'
+  jobType?: 'build' | 'kb_ingest' | 'workflow'
   kbEntryId?: string
   kbSourceRef?: string
   kbInputType?: 'url' | 'file'

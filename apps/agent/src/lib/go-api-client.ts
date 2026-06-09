@@ -72,3 +72,32 @@ export async function writeTaskStep(step: TaskStepPayload, retries = 3): Promise
     }
   }
 }
+
+export async function notifyWorkflowRun(
+  runId: string,
+  status: string,
+  errMsg?: string,
+): Promise<void> {
+  const apiUrl = process.env['FORGE_API_URL']
+  if (!apiUrl) return
+
+  const token = process.env['INTERNAL_TOKEN'] ?? ''
+  const body = JSON.stringify({ status, errorMsg: errMsg ?? '' })
+
+  try {
+    const res = await fetch(`${apiUrl}/internal/workflow-runs/${runId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Token': token,
+      },
+      body,
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!res.ok) {
+      console.error(`[notifyWorkflowRun] HTTP ${res.status} for run ${runId}`)
+    }
+  } catch (err) {
+    console.error(`[notifyWorkflowRun] failed for run ${runId}:`, err)
+  }
+}

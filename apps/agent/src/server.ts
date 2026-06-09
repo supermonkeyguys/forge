@@ -85,6 +85,83 @@ async function handleRun(req: IncomingMessage, res: ServerResponse): Promise<voi
   send(res, 202, { data: { jobId, status: 'queued' } })
 }
 
+// ── Route: POST /generate-workflow ───────────────────────────────
+
+async function handleGenerateWorkflow(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  let body: unknown
+  try { body = await readBody(req) } catch {
+    return sendError(res, 400, 'invalid JSON body')
+  }
+
+  const { userInput, clarifications } = body as Record<string, unknown>
+  if (typeof userInput !== 'string' || !userInput.trim()) {
+    return sendError(res, 400, 'userInput is required')
+  }
+
+  try {
+    const { generateWorkflowDefinition } = await import('./agents/pm-agent.js')
+    const definition = await generateWorkflowDefinition(
+      userInput,
+      Array.isArray(clarifications) ? (clarifications as string[]) : [],
+    )
+    send(res, 200, { definition })
+  } catch (err) {
+    console.error('[generate-workflow] error:', err)
+    sendError(res, 500, err instanceof Error ? err.message : 'generation failed')
+  }
+}
+
+// ── Route: POST /run-workflow ─────────────────────────────────────
+
+async function handleRunWorkflow(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  let body: unknown
+  try { body = await readBody(req) } catch {
+    return sendError(res, 400, 'invalid JSON body')
+  }
+
+  const { taskId, projectId, workflowDefinition } = body as Record<string, unknown>
+
+  if (typeof projectId !== 'string' || !projectId.trim())
+    return sendError(res, 400, 'projectId is required')
+  if (!workflowDefinition || typeof workflowDefinition !== 'object')
+    return sendError(res, 400, 'workflowDefinition is required')
+
+  const { WorkflowDefinitionSchema } = await import('./contracts/workflow.js')
+  const parsed = WorkflowDefinitionSchema.safeParse(workflowDefinition)
+  if (!parsed.success)
+    return sendError(res, 400, parsed.error.message)
+
+  const jobId = randomUUID()
+  const now = new Date().toISOString()
+  const job: Job = {
+    id: jobId,
+    taskId: typeof taskId === 'string' ? taskId : null,
+    projectId,
+    status: 'queued',
+    events: [],
+    draft: null,
+    previewUrl: null,
+    reviewUrl: null,
+    reviewHtml: null,
+    error: null,
+    waitingReason: null,
+    createdAt: now,
+    updatedAt: now,
+  }
+  jobStore.add(job)
+
+  const { runWorkflowJob } = await import('./job-runner.js')
+  runWorkflowJob(job, parsed.data).catch((err: unknown) => {
+    jobStore.patch(jobId, {
+      status: 'aborted',
+      error:  err instanceof Error ? err.message : String(err),
+      updatedAt: new Date().toISOString(),
+    })
+  })
+
+  send(res, 202, { data: { jobId, status: 'queued' } })
+}
+
 // ── Route: POST /run-kb-ingest ────────────────────────────────────
 
 async function handleRunKBIngest(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -235,6 +312,14 @@ export const server = createServer(async (req, res) => {
 
   if (method === 'POST' && url === '/run') {
     return void handleRun(req, res)
+  }
+
+  if (method === 'POST' && url === '/generate-workflow') {
+    return void handleGenerateWorkflow(req, res)
+  }
+
+  if (method === 'POST' && url === '/run-workflow') {
+    return void handleRunWorkflow(req, res)
   }
 
   if (method === 'POST' && url === '/run-kb-ingest') {

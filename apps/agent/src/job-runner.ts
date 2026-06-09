@@ -2,11 +2,12 @@ import { runKBIngestJob } from './agent-jobs/kb-ingest.js'
 import { Orchestrator } from './orchestrator/orchestrator.js'
 import { ForgeSandbox } from './sandbox/e2b-client.js'
 import { MockSandbox } from './sandbox/mock-sandbox.js'
+import { LocalSandbox } from './sandbox/local-sandbox.js'
 import { loadNextjsTemplate } from './sandbox/template-loader.js'
 import type { OrchestratorState, OrchestratorContext } from './orchestrator/state-machine.js'
 import type { ProgressEvent } from './agents/types.js'
 import type { DraftSpec } from './agents/pm-agent.js'
-import { notifyGoAPI, writeTaskStep } from './lib/go-api-client.js'
+import { notifyGoAPI, writeTaskStep, notifyWorkflowRun } from './lib/go-api-client.js'
 import { createProjectContextClient } from './lib/project-context-client.js'
 import { jobStore, type Job } from './job-store.js'
 import type { CustomAgentConfig } from './agents/builder/custom-agent.js'
@@ -51,13 +52,22 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
 
   const e2bKey = process.env['E2B_API_KEY'] ?? ''
   const useMock = !e2bKey || e2bKey === 'mock' || e2bKey.startsWith('e2b_your')
-  const sandbox = useMock
-    ? new MockSandbox()
-    : await ForgeSandbox.create()
+  const useLocal = e2bKey === 'local'
 
+  const sandbox = useLocal
+    ? new LocalSandbox(job.id)
+    : useMock
+      ? new MockSandbox()
+      : await ForgeSandbox.create()
+
+  // Load Next.js template into sandbox (E2B and local both need real files on disk/remote)
   if (!useMock) {
     const templateFiles = loadNextjsTemplate()
-    await (sandbox as ForgeSandbox).writeFiles(templateFiles)
+    if (useLocal) {
+      await Promise.all(templateFiles.map((f) => sandbox.writeFile(f.path, f.content)))
+    } else {
+      await (sandbox as ForgeSandbox).writeFiles(templateFiles)
+    }
   }
 
   const sandboxAdapter = {
@@ -84,6 +94,7 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
     agentOverrides,
     contextClient: createProjectContextClient() ?? undefined,
     userID: job.userId ?? undefined,
+    skipE2E: useMock,  // false for local and E2B — real server runs so E2E works
 
     onStateChange: (state: OrchestratorState, ctx: OrchestratorContext) => {
       const current = jobStore.get(job.id)!
@@ -152,7 +163,11 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
     jobStore.setOrchestrator(job.id, null)
   }
 
-  if (!useMock) {
+  if (useLocal) {
+    const localSandbox = sandbox as LocalSandbox
+    if (result.state !== 'done') await localSandbox.kill()
+    // On done: keep the dev server running for preview
+  } else if (!useMock) {
     const realSandbox = sandbox as ForgeSandbox
     if (result.state === 'done') {
       await realSandbox.keepAlive(30 * 60 * 1000)
@@ -160,4 +175,69 @@ export async function runJob(job: Job, userInput: string): Promise<void> {
       await realSandbox.kill()
     }
   }
+}
+
+// ── Workflow Job Execution ────────────────────────────────────────
+
+import { WorkerAgent } from './agents/worker-agent.js'
+import type { WorkflowDefinition, WorkflowStep } from './contracts/workflow.js'
+import type { RunContext } from './capabilities/types.js'
+
+export async function runWorkflowJob(
+  job: Job,
+  workflowDefinition: WorkflowDefinition,
+): Promise<void> {
+  jobStore.patch(job.id, { status: 'running', updatedAt: new Date().toISOString() })
+
+  const worker = new WorkerAgent()
+  const previousOutputs: Record<string, string> = {}
+  const steps = topoSortSteps(workflowDefinition.steps)
+
+  for (const step of steps) {
+    const ctx: RunContext = {
+      projectId: job.projectId,
+      jobId:     job.id,
+      stepId:    step.id,
+      emit:      (event) => jobStore.pushEvent(job.id, event as ProgressEvent),
+      previousOutputs,
+    }
+
+    const result = await worker.execute(step, ctx)
+    previousOutputs[step.id] = result.output
+
+    if (result.status === 'failed') {
+      jobStore.patch(job.id, {
+        status:    'aborted',
+        error:     result.error ?? result.output,
+        updatedAt: new Date().toISOString(),
+      })
+      if (job.taskId) {
+        await notifyWorkflowRun(job.taskId, 'aborted', result.error ?? undefined)
+      }
+      return
+    }
+  }
+
+  jobStore.patch(job.id, { status: 'done', updatedAt: new Date().toISOString() })
+  if (job.taskId) {
+    await notifyWorkflowRun(job.taskId, 'done')
+  }
+}
+
+function topoSortSteps(steps: WorkflowStep[]): WorkflowStep[] {
+  const byId = new Map(steps.map(s => [s.id, s]))
+  const visited = new Set<string>()
+  const result: WorkflowStep[] = []
+
+  function visit(id: string) {
+    if (visited.has(id)) return
+    visited.add(id)
+    const step = byId.get(id)
+    if (!step) return
+    for (const dep of step.depends_on) visit(dep)
+    result.push(step)
+  }
+
+  for (const step of steps) visit(step.id)
+  return result
 }
