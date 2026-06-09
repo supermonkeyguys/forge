@@ -24,8 +24,10 @@ type RouterDeps struct {
 	Memory        *handler.AgentMemoryHandler
 	KB            *handler.ProjectKBHandler
 	TaskStep      *handler.TaskStepHandler
-	Workflow      *handler.WorkflowHandler
-	Capability    *handler.CapabilityHandler
+	Workflow            *handler.WorkflowHandler
+	Capability          *handler.CapabilityHandler
+	WorkflowRun         *handler.WorkflowRunHandler
+	InternalWorkflowRun *handler.InternalWorkflowRunHandler
 	InternalToken string
 	JWTSecret     string
 	Logger        *slog.Logger
@@ -134,6 +136,14 @@ func NewRouter(deps RouterDeps) http.Handler {
 			})
 		}
 
+		// Workflow generation + run endpoints (must precede /workflows route to avoid chi matching "generate" as {workflowID})
+		if deps.WorkflowRun != nil {
+			r.Post("/workflows/generate", deps.WorkflowRun.Generate)
+			r.Post("/workflows/{workflowID}/runs", deps.WorkflowRun.CreateRun)
+			r.Get("/workflow-runs/{runID}", deps.WorkflowRun.GetRun)
+			r.Get("/workflow-runs/{runID}/events", deps.WorkflowRun.GetRunEvents)
+		}
+
 		// Workflows
 		if deps.Workflow != nil {
 			r.Route("/workflows", func(r chi.Router) {
@@ -171,6 +181,9 @@ func NewRouter(deps RouterDeps) http.Handler {
 			r.Get("/projects/{projectID}/kb", deps.Internal.SearchProjectKB)
 			r.Post("/projects/{projectID}/kb", deps.Internal.CreateProjectKBEntry)
 			r.Patch("/kb/{id}/content", deps.Internal.UpdateKBContent)
+			if deps.InternalWorkflowRun != nil {
+				r.Patch("/workflow-runs/{runID}/status", deps.InternalWorkflowRun.UpdateStatus)
+			}
 		})
 	}
 
