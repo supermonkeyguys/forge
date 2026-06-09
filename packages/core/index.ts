@@ -28,6 +28,7 @@ export {
   selectErrorMsg,
   selectTaskPrompt,
   selectAgentJobId,
+  selectWorkflowSteps,
 } from './task/workspace-store.ts'
 export type {
   WorkspacePhase,
@@ -58,6 +59,11 @@ export type { SettingsResponse } from './settings/settings-api.ts'
 export { api, ApiError } from './api/client.ts'
 export { parseWithFallback } from './api/schema.ts'
 
+// Workflow
+export { useWorkflows, useCreateWorkflow, useDeleteWorkflow } from './workflow/index.ts'
+export { useCapabilities, useCreateCapability } from './workflow/index.ts'
+export { useGenerateWorkflow, useRunWorkflow, useWorkflowRunEvents, useWorkflowRun } from './workflow/index.ts'
+
 // Types
 export type {
   Project,
@@ -71,4 +77,17 @@ export type {
   SpecFeature,
   User,
   AuthToken,
+} from './types/index.ts'
+
+export type {
+  CapabilityType,
+  WorkflowStep,
+  WorkflowDefinition,
+  WorkflowTrigger,
+  WorkflowStatus,
+  Workflow,
+  Capability,
+  WorkflowRun,
+  WorkflowRunStatus,
+  WorkflowRunEvents,
 } from './types/index.ts'

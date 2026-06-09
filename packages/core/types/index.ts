@@ -126,3 +126,73 @@ export interface Task {
   createdAt: string
   updatedAt: string
 }
+
+// ── Workflow types ─────────────────────────────────────────────────
+
+export type CapabilityType = 'browser' | 'http' | 'llm' | 'notify' | 'code' | 'file'
+
+export interface WorkflowStep {
+  id:           string
+  name:         string
+  capability:   CapabilityType
+  instructions: string
+  depends_on:   string[]
+  config?:      Record<string, unknown>
+}
+
+export interface WorkflowDefinition {
+  steps: WorkflowStep[]
+}
+
+export interface WorkflowTrigger {
+  type:    'manual' | 'webhook' | 'schedule'
+  config?: Record<string, unknown>
+}
+
+export type WorkflowStatus = 'draft' | 'active'
+
+export interface Workflow {
+  id:          string
+  userId:      string
+  name:        string
+  description: string
+  definition:  WorkflowDefinition
+  trigger:     WorkflowTrigger
+  status:      WorkflowStatus
+  createdAt:   string
+  updatedAt:   string
+}
+
+// ── Capability types ───────────────────────────────────────────────
+
+export interface Capability {
+  id:           string
+  userId:       string
+  name:         string
+  type:         CapabilityType
+  description:  string
+  configSchema: Record<string, unknown>
+  config:       Record<string, unknown>
+  createdAt:    string
+  updatedAt:    string
+}
+
+// ── WorkflowRun types ──────────────────────────────────────────────
+
+export type WorkflowRunStatus = 'queued' | 'running' | 'done' | 'failed'
+
+export interface WorkflowRun {
+  id:         string
+  workflowId: string
+  userId:     string
+  status:     WorkflowRunStatus
+  error:      string
+  agentJobId: string
+  createdAt:  string
+  finishedAt: string | null
+}
+
+export interface WorkflowRunEvents {
+  status: WorkflowRunStatus
+  events: Array<{ type: string; agent: string; content: string }>
+}
