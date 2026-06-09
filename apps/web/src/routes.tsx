@@ -9,6 +9,11 @@ const WorkspacePage = lazy(() => import('./pages/workspace').then(m => ({ defaul
 const AgentsPage = lazy(() => import('./pages/agents').then(m => ({ default: m.AgentsPage })))
 const KnowledgePage = lazy(() => import('./pages/knowledge').then(m => ({ default: m.KnowledgePage })))
 const SettingsPage = lazy(() => import('./pages/settings').then(m => ({ default: m.SettingsPage })))
+const WorkflowsPage = lazy(() => import('./pages/workflows').then(m => ({ default: m.WorkflowsPage })))
+const WorkflowRunPage = lazy(() =>
+  import('./pages/workflows/[id]/run').then(m => ({ default: m.WorkflowRunPage }))
+)
+const CapabilitiesPage = lazy(() => import('./pages/capabilities').then(m => ({ default: m.CapabilitiesPage })))
 
 function ProtectedRoute() {
   const isAuthed = useAuthStore(selectIsAuthed)
@@ -27,6 +32,9 @@ export function AppRoutes() {
             <Route path="/projects/:id" element={<WorkspacePage />} />
             <Route path="/agents" element={<AgentsPage />} />
             <Route path="/knowledge" element={<KnowledgePage />} />
+            <Route path="/workflows" element={<WorkflowsPage />} />
+            <Route path="/workflows/:id/run" element={<WorkflowRunPage />} />
+            <Route path="/capabilities" element={<CapabilitiesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
