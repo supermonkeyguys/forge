@@ -37,6 +37,7 @@ type Workflow struct {
 	Definition  WorkflowDefinition `json:"definition"`
 	Trigger     WorkflowTrigger    `json:"trigger"`
 	Status      WorkflowStatus     `json:"status"`
-	CreatedAt   time.Time          `json:"createdAt"`
-	UpdatedAt   time.Time          `json:"updatedAt"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
+	LastTriggeredAt *time.Time         `json:"lastTriggeredAt,omitempty"`
 }

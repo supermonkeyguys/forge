@@ -1,6 +1,9 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Repository interfaces are defined HERE in domain (ports),
 // implemented in infra/postgres (adapters).
@@ -70,6 +73,8 @@ type WorkflowRepository interface {
 	ListByUserID(ctx context.Context, userID string) ([]Workflow, error)
 	Update(ctx context.Context, w Workflow) (Workflow, error)
 	Delete(ctx context.Context, id string) error
+	ListActiveScheduled(ctx context.Context) ([]Workflow, error)
+	UpdateLastTriggered(ctx context.Context, id string, t time.Time) error
 }
 
 type CapabilityRepository interface {
