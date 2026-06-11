@@ -112,6 +112,7 @@ function BuildingPlaceholder({ phase, orchState }: { phase: string; orchState: s
         <p className="text-xs text-muted-foreground/60">
           {phase === 'input' && '输入需求后预览将出现在这里'}
           {phase === 'running' && '稍安勿躁，Agent 团队正在协作'}
+          {phase === 'done' && 'Mock 模式下无实时预览，接入 E2B 后可获得真实沙箱'}
         </p>
       </div>
 

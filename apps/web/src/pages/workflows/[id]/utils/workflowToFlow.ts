@@ -21,15 +21,16 @@ export function toFlow(def: WorkflowDefinition): {
   nodes: Node<StepNodeData>[]
   edges: Edge[]
 } {
+  const steps = def?.steps ?? []
   const g = new dagre.graphlib.Graph()
   g.setDefaultEdgeLabel(() => ({}))
   g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80 })
 
-  for (const step of def.steps) {
+  for (const step of steps) {
     g.setNode(step.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
   }
 
-  for (const step of def.steps) {
+  for (const step of steps) {
     for (const dep of step.depends_on) {
       g.setEdge(dep, step.id)
     }
@@ -37,7 +38,7 @@ export function toFlow(def: WorkflowDefinition): {
 
   dagre.layout(g)
 
-  const nodes: Node<StepNodeData>[] = def.steps.map(step => {
+  const nodes: Node<StepNodeData>[] = steps.map(step => {
     const pos = g.node(step.id)
     return {
       id:       step.id,
@@ -54,7 +55,7 @@ export function toFlow(def: WorkflowDefinition): {
   })
 
   const edges: Edge[] = []
-  for (const step of def.steps) {
+  for (const step of steps) {
     for (const dep of step.depends_on) {
       edges.push({
         id:     `${dep}->${step.id}`,

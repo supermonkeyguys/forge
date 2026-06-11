@@ -108,26 +108,32 @@ export class TestAgent implements Agent {
    * Core validation — exposed for unit testing.
    * `sandbox` is injected for testability (interface-based, not E2B-specific).
    */
-  async validate(spec: Spec, ctx: AgentRunContext | SandboxAdapter): Promise<ValidationReport> {
+  async validate(
+    spec: Spec,
+    ctx: AgentRunContext | SandboxAdapter,
+    opts?: { skipE2E?: boolean },
+  ): Promise<ValidationReport> {
     const sandbox = 'emit' in ctx ? this.sandboxFromCtx(ctx) : ctx
-
     const emit = 'emit' in ctx ? ctx.emit : () => {}
 
-    // Step 1: Run unit tests
+    // Step 1: Run unit tests (always)
     emit({ type: 'agent_thinking', agent: 'test', content: 'Running unit tests...' })
     const unitResults = await this.runUnitTests(sandbox)
 
-    // Step 2: Start dev server + wait for ready
-    emit({ type: 'agent_thinking', agent: 'test', content: 'Starting dev server...' })
-    const baseUrl = await this.startAndWaitForServer(sandbox)
+    // Step 2–4: E2E checks — skipped in mock/sandbox-less environments
+    let e2eChecks: E2ECheck[] = []
+    if (opts?.skipE2E) {
+      emit({ type: 'agent_thinking', agent: 'test', content: 'Mock sandbox — E2E checks skipped.' })
+    } else {
+      emit({ type: 'agent_thinking', agent: 'test', content: 'Starting dev server...' })
+      const baseUrl = await this.startAndWaitForServer(sandbox)
 
-    // Step 3: Plan E2E checks (LLM classifies each criterion)
-    emit({ type: 'agent_thinking', agent: 'test', content: 'Planning E2E checks...' })
-    const checkPlans = await this.planE2EChecks(spec)
+      emit({ type: 'agent_thinking', agent: 'test', content: 'Planning E2E checks...' })
+      const checkPlans = await this.planE2EChecks(spec)
 
-    // Step 4: Execute E2E checks
-    emit({ type: 'agent_thinking', agent: 'test', content: `Running ${checkPlans.length} E2E checks...` })
-    const e2eChecks = await this.executeE2EChecks(checkPlans, baseUrl, sandbox)
+      emit({ type: 'agent_thinking', agent: 'test', content: `Running ${checkPlans.length} E2E checks...` })
+      e2eChecks = await this.executeE2EChecks(checkPlans, baseUrl, sandbox)
+    }
 
     // Step 5: Compile report
     const errors = this.compileErrors(unitResults, e2eChecks)

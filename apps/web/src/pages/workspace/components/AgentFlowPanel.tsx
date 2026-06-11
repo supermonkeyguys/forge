@@ -6,6 +6,7 @@ import {
   selectPhase,
   selectEvents,
   selectProjectId,
+  selectWorkflowSteps,
   type AgentCardState,
 } from '../../../store/workspace-store'
 import { useTaskSteps, type TaskStep } from '@forge/core'
@@ -14,6 +15,17 @@ import { ScrollArea } from '../../../components/ui/scroll-area'
 import { cn } from '../../../lib/utils'
 import { Icons } from '../../../components/ui/icons'
 import { AgentDrawer } from './AgentDrawer'
+
+const DEFAULT_STEPS = [
+  { id: 'pm',        name: 'PM Agent',       subtitle: '需求分析与放大' },
+  { id: 'architect', name: 'Architect',      subtitle: '技术架构规划' },
+  { id: 'schema',    name: 'Schema Agent',   subtitle: '数据库 Schema' },
+  { id: 'logic',     name: 'Logic Agent',    subtitle: '业务逻辑 + 单测' },
+  { id: 'api',       name: 'API Agent',      subtitle: 'HTTP 接口层' },
+  { id: 'ui',        name: 'UI Agent',       subtitle: 'UI 组件 + Stories' },
+  { id: 'page',      name: 'Page Agent',     subtitle: '页面组装' },
+  { id: 'test',      name: 'Test Agent',     subtitle: '验证 + E2E 检查' },
+]
 
 type AgentMeta = { label: string; icon: (props: React.SVGProps<SVGSVGElement>) => React.ReactElement; description: string }
 
@@ -34,6 +46,8 @@ export function AgentFlowPanel() {
   const agentCards = useWorkspaceStore(selectAgentCards)
   const events = useWorkspaceStore(selectEvents)
   const projectId = useWorkspaceStore(selectProjectId)
+  const workflowSteps = useWorkspaceStore(selectWorkflowSteps)
+  const activeSteps = workflowSteps ?? DEFAULT_STEPS
   const { data: steps = [] } = useTaskSteps(
     projectId,
     phase === 'done' || phase === 'error',
@@ -94,16 +108,28 @@ export function AgentFlowPanel() {
           <IdleState onMock={injectMockEvents} />
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-            {Object.values(agentCards).map((card, i) => (
-              <div key={card.role} className="animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
-                <AgentCard
-                  card={card}
-                  step={stepByAgent(card.role)}
-                  isSelected={selectedRole === card.role}
-                  onClick={() => setSelectedRole(card.role === selectedRole ? null : card.role)}
-                />
-              </div>
-            ))}
+            {activeSteps.map((stepDef, i) => {
+              const card = agentCards[stepDef.id] ?? {
+                role: stepDef.id,
+                status: 'idle' as const,
+                currentAction: '',
+                filesWritten: [],
+                startedAt: null,
+                finishedAt: null,
+              }
+              return (
+                <div key={stepDef.id} className="animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
+                  <AgentCard
+                    card={card}
+                    step={stepByAgent(stepDef.id)}
+                    isSelected={selectedRole === stepDef.id}
+                    onClick={() => setSelectedRole(stepDef.id === selectedRole ? null : stepDef.id)}
+                    labelOverride={stepDef.name}
+                    descriptionOverride={'subtitle' in stepDef ? (stepDef as { subtitle: string }).subtitle : undefined}
+                  />
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -186,13 +212,19 @@ function AgentCard({
   step,
   isSelected,
   onClick,
+  labelOverride,
+  descriptionOverride,
 }: {
   card: AgentCardState
   step?: TaskStep
   isSelected: boolean
   onClick: () => void
+  labelOverride?: string
+  descriptionOverride?: string
 }) {
   const meta = AGENT_META[card.role] ?? { label: card.role, icon: Icons.Bot, description: '' }
+  const displayLabel = labelOverride ?? meta.label
+  const displayDescription = descriptionOverride ?? meta.description
   // When step data is loaded from DB, use its status instead of the live card state
   const effectiveStatus: AgentCardState['status'] = step
     ? (step.status === 'done' ? 'done' : step.status === 'failed' ? 'error' : card.status)
@@ -256,8 +288,8 @@ function AgentCard({
           'text-muted-foreground',
         )} />
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">{meta.label}</div>
-          <div className="text-[11px] text-muted-foreground/70">{meta.description}</div>
+          <div className="text-sm font-semibold">{displayLabel}</div>
+          <div className="text-[11px] text-muted-foreground/70">{displayDescription}</div>
         </div>
         <div className="flex items-center gap-1.5">
           {effectiveStatus === 'running' && (

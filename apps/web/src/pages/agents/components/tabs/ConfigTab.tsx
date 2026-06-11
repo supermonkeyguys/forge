@@ -4,6 +4,7 @@ import type { SystemAgentDef } from '../../../../lib/agent-registry'
 import { DarkInput } from '../../../../components/ui/dark-input'
 import { Textarea } from '../../../../components/ui/textarea'
 import { Button } from '../../../../components/ui/button'
+import { toast } from '../../../../store/toast-store'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -38,10 +39,19 @@ export function ConfigTab({
           tools: draftTools,
           writePaths: draftPaths,
         },
-        { onSuccess: (res) => res && onCreated(res.data) },
+        {
+          onSuccess: (res) => { if (res) { toast.success('Agent 已创建'); onCreated(res.data) } },
+          onError:   () => toast.error('创建失败，请稍后重试'),
+        },
       )
     } else if (customAgent) {
-      updateAgent.mutate({ id: customAgent.id, name: draftName, description: draftDescription })
+      updateAgent.mutate(
+        { id: customAgent.id, name: draftName, description: draftDescription },
+        {
+          onSuccess: () => toast.success('已保存'),
+          onError:   () => toast.error('保存失败，请稍后重试'),
+        },
+      )
     }
   }
 

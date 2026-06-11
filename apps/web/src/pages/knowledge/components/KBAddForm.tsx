@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useCreateKBEntry, useIngestKB } from '@forge/core'
 import { cn } from '../../../lib/utils'
+import { toast } from '../../../store/toast-store'
 import { Button } from '../../../components/ui/button'
 import { DarkInput } from '../../../components/ui/dark-input'
 import { Textarea } from '../../../components/ui/textarea'
@@ -24,14 +25,23 @@ export function KBAddForm({ projectId }: Props) {
     if (mode === 'text') {
       createEntry.mutate(
         { title, content, type },
-        { onSuccess: () => { setTitle(''); setContent('') } },
+        {
+          onSuccess: () => { toast.success('知识条目已添加'); setTitle(''); setContent('') },
+          onError:   () => toast.error('添加失败，请稍后重试'),
+        },
       )
     } else if (mode === 'url') {
-      ingestKB.mutate({ type: 'url', url }, { onSuccess: () => setUrl('') })
+      ingestKB.mutate({ type: 'url', url }, {
+        onSuccess: () => { toast.success('URL 已提交解析'); setUrl('') },
+        onError:   () => toast.error('提交失败，请稍后重试'),
+      })
     } else if (mode === 'file' && fileRef.current?.files?.[0]) {
       ingestKB.mutate(
         { type: 'file', file: fileRef.current.files[0] },
-        { onSuccess: () => { if (fileRef.current) fileRef.current.value = '' } },
+        {
+          onSuccess: () => { toast.success('文件已上传解析'); if (fileRef.current) fileRef.current.value = '' },
+          onError:   () => toast.error('上传失败，请稍后重试'),
+        },
       )
     }
   }

@@ -1,6 +1,7 @@
 import { useSetKBStatus, useDeleteKBEntry } from '@forge/core'
 import type { KBEntry } from '@forge/core'
 import { cn } from '../../../lib/utils'
+import { toast } from '../../../store/toast-store'
 
 const TYPE_LABELS: Record<string, string> = {
   principle: '原则', spec: '设计方案', test_asset: '测试资产', past_output: '过往产出',
@@ -38,8 +39,14 @@ export function KBList({ projectId, entries }: Props) {
               <KBCard
                 key={e.id}
                 entry={e}
-                onVerify={() => setStatus.mutate({ id: e.id, action: 'verify' })}
-                onDelete={() => deleteEntry.mutate(e.id)}
+                onVerify={() => setStatus.mutate({ id: e.id, action: 'verify' }, {
+                  onSuccess: () => toast.success('已确认'),
+                  onError:   () => toast.error('操作失败'),
+                })}
+                onDelete={() => deleteEntry.mutate(e.id, {
+                  onSuccess: () => toast.success('已删除'),
+                  onError:   () => toast.error('删除失败'),
+                })}
               />
             ))}
           </div>
@@ -57,8 +64,14 @@ export function KBList({ projectId, entries }: Props) {
               <KBCard
                 key={e.id}
                 entry={e}
-                onDeprecate={() => setStatus.mutate({ id: e.id, action: 'deprecate' })}
-                onDelete={() => deleteEntry.mutate(e.id)}
+                onDeprecate={() => setStatus.mutate({ id: e.id, action: 'deprecate' }, {
+                  onSuccess: () => toast.success('已废弃'),
+                  onError:   () => toast.error('操作失败'),
+                })}
+                onDelete={() => deleteEntry.mutate(e.id, {
+                  onSuccess: () => toast.success('已删除'),
+                  onError:   () => toast.error('删除失败'),
+                })}
               />
             ))}
           </div>

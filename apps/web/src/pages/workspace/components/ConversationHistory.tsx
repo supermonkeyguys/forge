@@ -10,7 +10,7 @@ import {
   selectEvents,
   selectAgentJobId,
 } from '../../../store/workspace-store'
-import { useCreateTask } from '@forge/core'
+import { useCreateTask, useAuthStore, selectToken } from '@forge/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
@@ -30,10 +30,12 @@ export function ConversationHistory() {
   const agentJobId = useWorkspaceStore(selectAgentJobId)
   const setPhase = useWorkspaceStore((s) => s.setPhase)
   const startGeneration = useWorkspaceStore((s) => s.startGeneration)
+  const token = useAuthStore(selectToken)
   const { mutate: createTask, isPending: isRetrying } = useCreateTask(projectId ?? '')
   const queryClient = useQueryClient()
   const [iterationInput, setIterationInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -42,7 +44,22 @@ export function ConversationHistory() {
 
   const handleIteration = async () => {
     const input = iterationInput.trim()
-    if (!input || isSending || !agentJobId) return
+    if (!input || isSending) return
+
+    // Waiting state but agent session expired (service restart) — start fresh with user guidance
+    if (phase === 'waiting' && !agentJobId) {
+      if (!taskPrompt || !projectId) return
+      queryClient.removeQueries({ queryKey: ['task-steps', projectId] })
+      createTask(`${taskPrompt}\n\nUser guidance: ${input}`, {
+        onSuccess: () => {
+          startGeneration(projectId)
+          setIterationInput('')
+        },
+      })
+      return
+    }
+
+    if (!agentJobId) return
     setIsSending(true)
 
     try {
@@ -59,6 +76,23 @@ export function ConversationHistory() {
       toast.error('发送失败，请重试')
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const handleForceComplete = async () => {
+    if (!projectId || !token || isCompleting) return
+    setIsCompleting(true)
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/tasks/latest/complete`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('force complete failed')
+      setPhase('done')
+    } catch {
+      toast.error('标记完成失败，请重试')
+    } finally {
+      setIsCompleting(false)
     }
   }
 
@@ -149,22 +183,36 @@ export function ConversationHistory() {
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && void handleIteration()}
               placeholder={phase === 'waiting' ? '告诉 AI 怎么解决...' : '继续迭代，例如：把按钮改成蓝色'}
               className="flex-1 border-border/40 bg-background/50 text-sm"
-              disabled={isSending}
+              disabled={isSending || isCompleting}
             />
             <Button
               onClick={() => void handleIteration()}
-              disabled={!iterationInput.trim() || isSending || !agentJobId}
+              disabled={!iterationInput.trim() || isSending || isRetrying || isCompleting || (!agentJobId && phase !== 'waiting')}
               size="sm"
             >
-              {isSending ? (
+              {(isSending || isRetrying) ? (
                 <span className="flex items-center gap-1.5">
                   <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
                   发送中
                 </span>
               ) : '发送'}
             </Button>
+            {phase === 'waiting' && (
+              <Button
+                onClick={() => void handleForceComplete()}
+                disabled={isCompleting || isSending}
+                size="sm"
+                variant="outline"
+                className="shrink-0 border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10"
+              >
+                {isCompleting ? '处理中...' : '跳过验证'}
+              </Button>
+            )}
           </div>
-          {!agentJobId && (phase === 'done' || phase === 'waiting') && (
+          {!agentJobId && phase === 'waiting' && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground/50">Agent 会话已过期，发送后将以你的指引重新发起任务</p>
+          )}
+          {!agentJobId && phase === 'done' && (
             <p className="mt-1.5 text-[11px] text-muted-foreground/50">迭代需要 Agent 任务仍在运行中</p>
           )}
         </div>

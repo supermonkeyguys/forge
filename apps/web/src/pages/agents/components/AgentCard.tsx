@@ -2,6 +2,7 @@ import { useDeleteAgent } from '@forge/core'
 import type { UserAgent } from '@forge/core'
 import type { SystemAgentDef } from '../../../lib/agent-registry'
 import { Button } from '../../../components/ui/button'
+import { toast } from '../../../store/toast-store'
 
 interface Props {
   systemAgent: SystemAgentDef | null
@@ -111,7 +112,10 @@ export function AgentCard({ systemAgent, customAgent, isCreating, onFork, onDele
           </div>
         </div>
         <Button
-          onClick={() => deleteAgent.mutate(customAgent.id, { onSuccess: () => onDelete(customAgent.id) })}
+          onClick={() => deleteAgent.mutate(customAgent.id, {
+            onSuccess: () => { toast.success('Agent 已删除'); onDelete(customAgent.id) },
+            onError:   () => toast.error('删除失败，请稍后重试'),
+          })}
           disabled={deleteAgent.isPending}
           className="mt-2 w-full border border-red-500/20 bg-red-500/[0.07] text-red-400/70 shadow-none hover:bg-red-500/10 hover:text-red-400"
           variant="ghost"

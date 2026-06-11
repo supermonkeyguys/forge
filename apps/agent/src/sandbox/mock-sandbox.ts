@@ -28,7 +28,7 @@ export class MockSandbox implements SandboxInterface {
   }
 
   getPreviewUrl(_port: number): string {
-    return 'http://localhost:3000'
+    return ''
   }
 
   async keepAlive(_timeoutMs: number): Promise<void> {}

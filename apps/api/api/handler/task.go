@@ -169,6 +169,45 @@ func (h *TaskHandler) LatestEvents(w http.ResponseWriter, r *http.Request) {
 	middleware.WriteJSON(w, http.StatusOK, task)
 }
 
+// POST /api/v1/projects/{projectID}/tasks/latest/complete
+// Force the latest task (must be in 'waiting' state) to 'done' without re-running.
+// Used when the user chooses to skip validation and accept the current build.
+func (h *TaskHandler) ForceComplete(w http.ResponseWriter, r *http.Request) {
+	projectID := chi.URLParam(r, "projectID")
+	userID := middleware.UserIDFromContext(r.Context())
+
+	task, err := h.taskRepo.GetLatestByProjectID(r.Context(), projectID)
+	if errors.Is(err, domain.ErrNotFound) {
+		middleware.WriteError(w, domain.ErrNotFound)
+		return
+	}
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	if task.UserID != userID {
+		middleware.WriteError(w, domain.ErrForbidden)
+		return
+	}
+	if task.Status != domain.TaskStatusWaiting {
+		middleware.WriteError(w, fmt.Errorf("task is not in waiting state: %w", domain.ErrInvalidInput))
+		return
+	}
+
+	updated, err := h.taskRepo.UpdateStatus(r.Context(), task.ID, domain.TaskStatusDone, task.PreviewURL, "")
+	if err != nil {
+		middleware.WriteError(w, err)
+		return
+	}
+	if h.projectRepo != nil {
+		if _, err := h.projectRepo.UpdateStatus(r.Context(), projectID, domain.ProjectStatusDone, task.PreviewURL); err != nil {
+			log.Printf("[ForceComplete] projectRepo.UpdateStatus project=%s err=%v", projectID, err)
+		}
+	}
+
+	middleware.WriteJSON(w, http.StatusOK, updated)
+}
+
 // GET /api/v1/tasks/{taskID}/stream
 // Server-Sent Events stream for real-time agent progress.
 func (h *TaskHandler) Stream(w http.ResponseWriter, r *http.Request) {

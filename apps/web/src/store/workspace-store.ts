@@ -21,6 +21,7 @@ export {
   selectErrorMsg,
   selectTaskPrompt,
   selectAgentJobId,
+  selectWorkflowSteps,
 } from '@forge/core'
 
 export type {

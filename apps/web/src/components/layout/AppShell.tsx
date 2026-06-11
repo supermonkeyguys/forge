@@ -60,6 +60,8 @@ export function AppShell() {
   const prefetchProjects = () => import('../../pages/projects')
   const prefetchAgents = () => import('../../pages/agents')
   const prefetchKnowledge = () => import('../../pages/knowledge')
+  const prefetchWorkflows = () => import('../../pages/workflows')
+  const prefetchCapabilities = () => import('../../pages/capabilities')
   const prefetchSettings = () => import('../../pages/settings')
 
   return (
@@ -85,7 +87,6 @@ export function AppShell() {
           />
         )}
 
-        <NavItem to="/conversations" icon={<Icons.MessageSquare className="h-[17px] w-[17px]" />} label="对话" />
         <NavItem
           to="/agents"
           icon={<Icons.Bot className="h-[17px] w-[17px]" />}
@@ -97,6 +98,18 @@ export function AppShell() {
           icon={<Icons.BookOpen className="h-[17px] w-[17px]" />}
           label="知识库"
           onPrefetch={prefetchKnowledge}
+        />
+        <NavItem
+          to="/workflows"
+          icon={<Icons.GitBranch className="h-[17px] w-[17px]" />}
+          label="工作流"
+          onPrefetch={prefetchWorkflows}
+        />
+        <NavItem
+          to="/capabilities"
+          icon={<Icons.Zap className="h-[17px] w-[17px]" />}
+          label="能力"
+          onPrefetch={prefetchCapabilities}
         />
         <div className="flex-1" />
         <div className="mb-1 h-px w-7 bg-white/[0.06]" />

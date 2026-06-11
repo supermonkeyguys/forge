@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuthStore, selectIsAuthed } from '@forge/core'
 import { AppShell } from './components/layout/AppShell'
+import { ErrorBoundary } from './components/ui/error-boundary'
 
 const LoginPage = lazy(() => import('./pages/login').then(m => ({ default: m.LoginPage })))
 const ProjectsPage = lazy(() => import('./pages/projects').then(m => ({ default: m.ProjectsPage })))
@@ -26,27 +27,33 @@ function ProtectedRoute() {
   return isAuthed ? <Outlet /> : <Navigate to="/login" replace />
 }
 
+function E({ children }: { children: React.ReactNode }) {
+  return <ErrorBoundary>{children}</ErrorBoundary>
+}
+
 export function AppRoutes() {
   return (
-    <Suspense fallback={null}>
-      <Routes>
-        <Route path="/" element={<Navigate to="/projects" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppShell />}>
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/:id" element={<WorkspacePage />} />
-            <Route path="/agents" element={<AgentsPage />} />
-            <Route path="/knowledge" element={<KnowledgePage />} />
-            <Route path="/workflows" element={<WorkflowsPage />} />
-            <Route path="/workflows/:id" element={<WorkflowDetailPage />} />
-            <Route path="/workflows/:id/run" element={<WorkflowRunPage />} />
-            <Route path="/workflows/:id/edit" element={<WorkflowEditorPage />} />
-            <Route path="/capabilities" element={<CapabilitiesPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+    <ErrorBoundary>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/projects" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppShell />}>
+              <Route path="/projects"         element={<E><ProjectsPage /></E>} />
+              <Route path="/projects/:id"     element={<E><WorkspacePage /></E>} />
+              <Route path="/agents"           element={<E><AgentsPage /></E>} />
+              <Route path="/knowledge"        element={<E><KnowledgePage /></E>} />
+              <Route path="/workflows"        element={<E><WorkflowsPage /></E>} />
+              <Route path="/workflows/:id"    element={<E><WorkflowDetailPage /></E>} />
+              <Route path="/workflows/:id/run"  element={<E><WorkflowRunPage /></E>} />
+              <Route path="/workflows/:id/edit" element={<E><WorkflowEditorPage /></E>} />
+              <Route path="/capabilities"     element={<E><CapabilitiesPage /></E>} />
+              <Route path="/settings"         element={<E><SettingsPage /></E>} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   )
 }

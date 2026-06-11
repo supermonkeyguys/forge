@@ -3,13 +3,22 @@ import { api } from '../api/client.ts'
 import { useAuthStore, selectToken } from '../auth/auth-store.ts'
 import type { Workflow, WorkflowDefinition, WorkflowTrigger, WorkflowStatus } from '../types/index.ts'
 
+
+function normalizeWorkflow(w: Workflow): Workflow {
+  return {
+    ...w,
+    definition: { steps: w.definition?.steps ?? [] },
+    trigger:    w.trigger ?? { type: 'manual' },
+  }
+}
+
 export function useWorkflows() {
   const token = useAuthStore(selectToken)
   return useQuery<Workflow[]>({
     queryKey: ['workflows'],
     queryFn:  async () => {
       const res = await api.get<Workflow[]>('/api/v1/workflows', token ?? undefined)
-      return res.data ?? []
+      return (res.data ?? []).map(normalizeWorkflow)
     },
     enabled: !!token,
   })

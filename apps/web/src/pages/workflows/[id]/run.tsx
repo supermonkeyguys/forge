@@ -90,7 +90,7 @@ export function WorkflowRunPage() {
 
   const stepStatuses: Record<string, StepStatus> = {}
   if (workflow) {
-    for (const s of workflow.definition.steps) stepStatuses[s.id] = 'pending'
+    for (const s of workflow.definition?.steps ?? []) stepStatuses[s.id] = 'pending'
   }
   for (const ev of stepEvents) {
     if (ev.type === 'agent_start') stepStatuses[ev.agent] = 'running'
@@ -106,7 +106,7 @@ export function WorkflowRunPage() {
     return <div className="p-8 text-muted-foreground text-sm">加载中...</div>
   }
 
-  const layers = computeLayers(workflow.definition.steps as WorkflowStep[])
+  const layers = computeLayers((workflow.definition?.steps ?? []) as WorkflowStep[])
 
   return (
     <div className="flex flex-1 overflow-hidden">

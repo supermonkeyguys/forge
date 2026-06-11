@@ -10,7 +10,7 @@
  */
 
 import { create } from 'zustand'
-import type { AgentEvent, ProjectStatus, Spec } from '../types/index.ts'
+import type { AgentEvent, ProjectStatus, Spec, WorkflowStep } from '../types/index.ts'
 
 // DraftSpec mirrors the PM Agent output shape.
 export interface DraftFeature {
@@ -93,6 +93,10 @@ interface WorkspaceState {
   agentJobId: string | null
   setAgentJobId: (jobId: string) => void
 
+  // ── Workflow steps (null = fallback to DEFAULT_STEPS) ─────────────
+  workflowSteps: WorkflowStep[] | null
+  setWorkflowSteps: (steps: WorkflowStep[] | null) => void
+
   // ── Actions ──────────────────────────────────────────────────
   startGeneration: (projectId: string) => void
   setPreviewUrl: (url: string) => void
@@ -130,6 +134,7 @@ const initialState = {
   errorMsg: null,
   taskPrompt: null,
   agentJobId: null,
+  workflowSteps: null,
 }
 
 // ── Store ─────────────────────────────────────────────────────────
@@ -144,6 +149,7 @@ export const useWorkspaceStore = create<WorkspaceState>()((set) => ({
   setConfirmedSpec: (s) => set({ confirmedSpec: s }),
 
   setAgentJobId: (jobId) => set({ agentJobId: jobId }),
+  setWorkflowSteps: (steps) => set({ workflowSteps: steps }),
 
   startGeneration: (projectId) =>
     set((s) => ({
@@ -151,6 +157,13 @@ export const useWorkspaceStore = create<WorkspaceState>()((set) => ({
       phase: 'running',
       agentCards: initialCards(),
       events: [],
+      previewUrl: null,
+      errorMsg: null,
+      waitingReason: null,
+      agentJobId: null,
+      orchestratorState: null,
+      draftSpec: null,
+      workflowSteps: null,
       // Preserve prompt for retry button: use current userInput or keep existing taskPrompt
       taskPrompt: s.userInput || s.taskPrompt,
     })),
@@ -226,3 +239,4 @@ export const selectWaitingReason = (s: WorkspaceState) => s.waitingReason
 export const selectErrorMsg = (s: WorkspaceState) => s.errorMsg
 export const selectTaskPrompt = (s: WorkspaceState) => s.taskPrompt
 export const selectAgentJobId = (s: WorkspaceState) => s.agentJobId
+export const selectWorkflowSteps = (s: WorkspaceState) => s.workflowSteps

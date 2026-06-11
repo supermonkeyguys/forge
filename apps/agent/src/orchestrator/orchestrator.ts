@@ -70,6 +70,8 @@ export interface OrchestratorDeps {
   userID?: string
   /** Called after each logical agent step completes (analyze, plan, task, validate). */
   onTaskComplete?: (step: CompletedStep) => void
+  /** When true (mock sandbox), skip E2E checks — unit tests still run. */
+  skipE2E?: boolean
 }
 
 export interface SandboxInterface {
@@ -209,9 +211,20 @@ export class Orchestrator {
     if (this.ctx.state !== 'waiting') {
       throw new Error(`Cannot resume: current state is "${this.ctx.state}", not "waiting"`)
     }
-    // Merge user supplement into the original input
-    this.ctx.userInput = this.ctx.userInput + '\n\nUser supplement: ' + userInput
     this.ctx.pendingUserInput = null
+
+    // If the user just wants to skip validation and mark done, honour that directly.
+    const isDoneIntent = /\b(skip|done|complete|finish|ignore|mark.{0,10}done)\b/i.test(userInput)
+      || /跳过|标记.*完成|完成|忽略/.test(userInput)
+    if (isDoneIntent) {
+      this.ctx.state = 'done'
+      await this.deps.onStateChange('done', this.ctx)
+      this.emit({ type: 'state_change', state: 'done' as any })
+      return { state: 'done', previewUrl: this.ctx.reviewUrl ?? undefined }
+    }
+
+    // Otherwise merge the guidance and re-run from analysis
+    this.ctx.userInput = this.ctx.userInput + '\n\nUser supplement: ' + userInput
     await this.dispatch({ type: 'USER_INPUT', input: userInput })
     return this.run()
   }
@@ -436,7 +449,7 @@ export class Orchestrator {
     this.emit({ type: 'agent_start', agent: 'test', message: 'Running validation...' })
 
     const testStart = Date.now()
-    this.lastReport = await this.test.validate(this.spec!, this.deps.sandbox)
+    this.lastReport = await this.test.validate(this.spec!, this.deps.sandbox, { skipE2E: this.deps.skipE2E })
     const testDuration = Date.now() - testStart
 
     await this.writeSandboxFile(
@@ -453,7 +466,8 @@ export class Orchestrator {
     })
 
     if (this.lastReport.overall === 'passed') {
-      this.ctx.previewUrl = this.deps.sandbox.getPreviewUrl(3000)
+      const url = this.deps.sandbox.getPreviewUrl(3000)
+      if (url) this.ctx.previewUrl = url
       await this.dispatch({ type: 'VALIDATION_PASSED' })
     } else {
       await this.dispatch({ type: 'VALIDATION_FAILED' })
@@ -691,10 +705,25 @@ Output [] if nothing is genuinely reusable. Be selective — quality over quanti
     const next = transition(this.ctx, event)
 
     if (next === 'waiting') {
-      this.ctx.pendingUserInput = this.lastReport
-        ? `Validation failed after ${this.ctx.retryCount} retries.\n\n` +
-          this.lastReport.errors.map((e) => `- ${e.message}`).join('\n')
-        : 'Could not complete generation.'
+      if (this.lastReport) {
+        const unitFails = this.lastReport.errors.filter((e) => e.type === 'unit_test').length
+        const e2eFails = this.lastReport.errors.filter((e) => e.type === 'e2e').length
+        const parts: string[] = []
+        if (unitFails > 0) parts.push(`${unitFails} unit test failure${unitFails > 1 ? 's' : ''}`)
+        if (e2eFails > 0) parts.push(`${e2eFails} E2E check failure${e2eFails > 1 ? 's' : ''}`)
+        const summary = parts.length > 0 ? parts.join(', ') : `${this.lastReport.errors.length} errors`
+        // Show first 3 representative errors so the human has context without being overwhelmed
+        const samples = this.lastReport.errors.slice(0, 3).map((e) => `• ${e.message}`).join('\n')
+        const more = this.lastReport.errors.length > 3
+          ? `\n…and ${this.lastReport.errors.length - 3} more.`
+          : ''
+        this.ctx.pendingUserInput =
+          `Validation failed after ${this.ctx.retryCount} retries (${summary}).\n\n` +
+          `${samples}${more}\n\n` +
+          `How would you like to proceed? (e.g. "skip E2E checks", "focus on auth only", "mark as done")`
+      } else {
+        this.ctx.pendingUserInput = 'Could not complete generation. Please provide guidance.'
+      }
     }
 
     this.ctx.state = next

@@ -19,6 +19,7 @@ import { WorkflowCanvas } from './components/WorkflowCanvas'
 import { StepEditPanel }   from './components/StepEditPanel'
 import { TriggerPanel } from './components/TriggerPanel'
 import type { WorkflowTrigger, WorkflowStatus } from '@forge/core'
+import { toast } from '../../../store/toast-store'
 import { toFlow, toWorkflow, reLayout } from './utils/workflowToFlow'
 import type { StepNodeData } from './utils/workflowToFlow'
 
@@ -106,8 +107,9 @@ export function WorkflowEditorPage() {
     try {
       const definition = toWorkflow(nodes, edges)
       await update({ id, definition })
+      toast.success('保存成功')
     } catch {
-      alert('保存失败，请重试')
+      toast.error('保存失败，请重试')
     } finally {
       setSaving(false)
     }
@@ -158,7 +160,7 @@ export function WorkflowEditorPage() {
     try {
       await update({ id, trigger, status })
     } catch {
-      alert('触发设置保存失败')
+      toast.error('触发设置保存失败')
     }
   }, [id, update])
 
