@@ -17,6 +17,8 @@ import { Input } from '../../../components/ui/input'
 import { Icons } from '../../../components/ui/icons'
 import { WorkflowCanvas } from './components/WorkflowCanvas'
 import { StepEditPanel }   from './components/StepEditPanel'
+import { TriggerPanel } from './components/TriggerPanel'
+import type { WorkflowTrigger, WorkflowStatus } from '@forge/core'
 import { toFlow, toWorkflow, reLayout } from './utils/workflowToFlow'
 import type { StepNodeData } from './utils/workflowToFlow'
 
@@ -46,6 +48,13 @@ export function WorkflowEditorPage() {
       setInitialised(true)
     }
   }, [workflow, initialised, setNodes, setEdges])
+
+  useEffect(() => {
+    if (workflow && !initialised) {
+      setLocalTrigger(workflow.trigger)
+      setLocalStatus(workflow.status)
+    }
+  }, [workflow, initialised])
 
   // ── Selected node + edit panel ────────────────────────────────────
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -107,6 +116,13 @@ export function WorkflowEditorPage() {
   // ── Execute ───────────────────────────────────────────────────────
   const [runId,   setRunId]   = useState<string | null>(null)
   const [running, setRunning] = useState(false)
+  const [showTrigger,   setShowTrigger]   = useState(false)
+  const [localTrigger,  setLocalTrigger]  = useState<WorkflowTrigger>(
+    workflow?.trigger ?? { type: 'manual' }
+  )
+  const [localStatus,   setLocalStatus]   = useState<WorkflowStatus>(
+    workflow?.status ?? 'draft'
+  )
   const { data: runEvents }   = useWorkflowRunEvents(runId)
 
   useEffect(() => {
@@ -133,6 +149,18 @@ export function WorkflowEditorPage() {
     const terminal = runEvents.status === 'done' || runEvents.status === 'failed'
     if (terminal) setRunning(false)
   }, [runEvents, setNodes])
+
+  const handleTriggerSave = useCallback(async (trigger: WorkflowTrigger, status: WorkflowStatus) => {
+    if (!id) return
+    setLocalTrigger(trigger)
+    setLocalStatus(status)
+    setShowTrigger(false)
+    try {
+      await update({ id, trigger, status })
+    } catch {
+      alert('触发设置保存失败')
+    }
+  }, [id, update])
 
   const handleExecute = useCallback(async () => {
     if (!id) return
@@ -191,6 +219,25 @@ export function WorkflowEditorPage() {
             </>
           )}
         </Button>
+
+        <div className="relative">
+          <Button
+            size="sm"
+            variant={localStatus === 'active' ? 'default' : 'ghost'}
+            onClick={() => setShowTrigger(v => !v)}
+          >
+            <Icons.Bell className="h-3.5 w-3.5 mr-1.5" />
+            {localStatus === 'active' ? '定时已启用' : '触发'}
+          </Button>
+          {showTrigger && (
+            <TriggerPanel
+              trigger={localTrigger}
+              status={localStatus}
+              onSave={handleTriggerSave}
+              onClose={() => setShowTrigger(false)}
+            />
+          )}
+        </div>
       </div>
 
       {/* Canvas + edit panel */}

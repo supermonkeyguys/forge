@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client.ts'
 import { useAuthStore, selectToken } from '../auth/auth-store.ts'
-import type { Workflow, WorkflowDefinition, WorkflowTrigger } from '../types/index.ts'
+import type { Workflow, WorkflowDefinition, WorkflowTrigger, WorkflowStatus } from '../types/index.ts'
 
 export function useWorkflows() {
   const token = useAuthStore(selectToken)
@@ -56,6 +56,7 @@ export function useUpdateWorkflow() {
       description?: string
       definition?: WorkflowDefinition
       trigger?: WorkflowTrigger
+      status?: WorkflowStatus
     }) => {
       const { id, ...body } = input
       const res = await api.put<Workflow>(`/api/v1/workflows/${id}`, body, token ?? undefined)
