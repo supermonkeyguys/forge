@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCreateWorkflow, useGenerateWorkflow } from '@forge/core'
 import type { WorkflowDefinition } from '@forge/core'
 import { Button } from '../../../components/ui/button'
@@ -7,6 +8,7 @@ import { Input } from '../../../components/ui/input'
 interface Props { onClose: () => void }
 
 export function CreateWorkflowModal({ onClose }: Props) {
+  const navigate = useNavigate()
   const [step, setStep] = useState<'describe' | 'generating' | 'confirm' | 'error'>('describe')
   const [input, setInput] = useState('')
   const [generatedDef, setGeneratedDef] = useState<WorkflowDefinition | null>(null)
@@ -31,7 +33,11 @@ export function CreateWorkflowModal({ onClose }: Props) {
     if (!generatedDef) return
     create(
       { name: input.slice(0, 40), description: input, definition: generatedDef },
-      { onSuccess: onClose },
+      { onSuccess: (workflow) => {
+          onClose()
+          navigate(`/workflows/${workflow.id}/edit`)
+        }
+      },
     )
   }
 
