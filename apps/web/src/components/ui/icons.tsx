@@ -325,9 +325,59 @@ function BookOpen(props: IconProps) {
   )
 }
 
+function Play(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </Icon>
+  )
+}
+
+function Trash2(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </Icon>
+  )
+}
+
+function GitBranch(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <line x1="6" y1="3" x2="6" y2="15" />
+      <circle cx="18" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M18 9a9 9 0 0 1-9 9" />
+    </Icon>
+  )
+}
+
+function Zap(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </Icon>
+  )
+}
+
+function Plus(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+
 export const Icons = {
   BookOpen,
   Hammer,
+  GitBranch,
+  Zap,
   Clipboard,
   Blocks,
   Database,
@@ -353,4 +403,7 @@ export const Icons = {
   Bell,
   LayoutGrid,
   MessageSquare,
+  Play,
+  Trash2,
+  Plus,
 }
