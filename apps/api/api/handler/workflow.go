@@ -3,20 +3,29 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/robfig/cron/v3"
 
 	"github.com/forge-ai/forge/api/api/middleware"
 	"github.com/forge-ai/forge/api/domain"
 )
 
-type WorkflowHandler struct {
-	repo domain.WorkflowRepository
+// WorkflowScheduler is the minimal interface WorkflowHandler needs from the scheduler.
+type WorkflowScheduler interface {
+	Refresh(workflowID string, trigger domain.WorkflowTrigger, status domain.WorkflowStatus)
+	Remove(workflowID string)
 }
 
-func NewWorkflowHandler(repo domain.WorkflowRepository) *WorkflowHandler {
-	return &WorkflowHandler{repo: repo}
+type WorkflowHandler struct {
+	repo      domain.WorkflowRepository
+	scheduler WorkflowScheduler // may be nil in tests
+}
+
+func NewWorkflowHandler(repo domain.WorkflowRepository, scheduler WorkflowScheduler) *WorkflowHandler {
+	return &WorkflowHandler{repo: repo, scheduler: scheduler}
 }
 
 // POST /api/v1/workflows
@@ -37,6 +46,10 @@ func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 		middleware.WriteFieldError(w, "name", "name is required")
 		return
 	}
+	if err := validateTrigger(body.Trigger); err != nil {
+		middleware.WriteFieldError(w, "trigger", err.Error())
+		return
+	}
 
 	wf, err := h.repo.Create(r.Context(), domain.Workflow{
 		UserID:      userID,
@@ -49,6 +62,9 @@ func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		middleware.WriteError(w, err)
 		return
+	}
+	if h.scheduler != nil {
+		h.scheduler.Refresh(wf.ID, wf.Trigger, wf.Status)
 	}
 	middleware.WriteJSON(w, http.StatusCreated, wf)
 }
@@ -116,6 +132,10 @@ func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if body.Status == "" {
 		body.Status = existing.Status
 	}
+	if err := validateTrigger(body.Trigger); err != nil {
+		middleware.WriteFieldError(w, "trigger", err.Error())
+		return
+	}
 
 	updated, err := h.repo.Update(r.Context(), domain.Workflow{
 		ID:          id,
@@ -129,6 +149,9 @@ func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		middleware.WriteError(w, err)
 		return
+	}
+	if h.scheduler != nil {
+		h.scheduler.Refresh(updated.ID, updated.Trigger, updated.Status)
 	}
 	middleware.WriteJSON(w, http.StatusOK, updated)
 }
@@ -156,5 +179,24 @@ func (h *WorkflowHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		middleware.WriteError(w, err)
 		return
 	}
+	if h.scheduler != nil {
+		h.scheduler.Remove(id)
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// validateTrigger returns an error if a schedule trigger has an invalid cron expression.
+func validateTrigger(t domain.WorkflowTrigger) error {
+	if t.Type != "schedule" {
+		return nil
+	}
+	cronExpr, _ := t.Config["cron"].(string)
+	if cronExpr == "" {
+		return fmt.Errorf("schedule trigger requires config.cron")
+	}
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	if _, err := parser.Parse(cronExpr); err != nil {
+		return fmt.Errorf("invalid cron expression: %w", err)
+	}
+	return nil
 }

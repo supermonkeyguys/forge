@@ -16,6 +16,7 @@ import (
 	apiPkg "github.com/forge-ai/forge/api/api"
 	"github.com/forge-ai/forge/api/api/handler"
 	"github.com/forge-ai/forge/api/infra/postgres"
+	"github.com/forge-ai/forge/api/internal/scheduler"
 )
 
 func main() {
@@ -50,6 +51,14 @@ func main() {
 	capabilityRepo := postgres.NewCapabilityRepo(pool)
 	workflowRunRepo := postgres.NewWorkflowRunRepo(pool)
 
+	// Cron scheduler — manages schedule triggers
+	cronScheduler := scheduler.NewCronScheduler(workflowRepo, workflowRunRepo, cfg.AgentServiceURL, logger)
+	if err := cronScheduler.Start(context.Background()); err != nil {
+		logger.Error("cron scheduler failed to start", "error", err)
+		os.Exit(1)
+	}
+	defer cronScheduler.Stop()
+
 	// 3. Build handlers (receive domain interfaces)
 	hasher := handler.BcryptHasher{}
 	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, hasher)
@@ -61,7 +70,7 @@ func main() {
 	agentHandler := handler.NewAgentHandler(agentRepo)
 	memoryHandler := handler.NewAgentMemoryHandler(memoryRepo)
 	pkbHandler := handler.NewProjectKBHandlerWithAgent(pkbRepo, cfg.AgentServiceURL)
-	workflowHandler := handler.NewWorkflowHandler(workflowRepo)
+	workflowHandler := handler.NewWorkflowHandler(workflowRepo, cronScheduler)
 	capabilityHandler := handler.NewCapabilityHandler(capabilityRepo)
 	workflowRunHandler := handler.NewWorkflowRunHandler(workflowRepo, workflowRunRepo, cfg.AgentServiceURL)
 	internalWorkflowRunHandler := handler.NewInternalWorkflowRunHandler(workflowRunRepo)
