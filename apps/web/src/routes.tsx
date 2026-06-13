@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuthStore, selectIsAuthed } from '@forge/core'
 import { AppShell } from './components/layout/AppShell'
 import { ErrorBoundary } from './components/ui/error-boundary'
+import { PageSkeleton } from './components/ui/page-skeleton'
 
 const LoginPage = lazy(() => import('./pages/login').then(m => ({ default: m.LoginPage })))
 const ProjectsPage = lazy(() => import('./pages/projects').then(m => ({ default: m.ProjectsPage })))
@@ -34,7 +35,7 @@ function E({ children }: { children: React.ReactNode }) {
 export function AppRoutes() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={null}>
+      <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/" element={<Navigate to="/projects" replace />} />
           <Route path="/login" element={<LoginPage />} />
