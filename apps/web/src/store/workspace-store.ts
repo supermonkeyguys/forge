@@ -29,4 +29,5 @@ export type {
   AgentCardState,
   DraftSpec,
   DraftFeature,
+  AgentEvent,
 } from '@forge/core'
