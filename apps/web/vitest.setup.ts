@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom'
+
 // Setup mock storage before any imports
 const localStorageStore: Record<string, string> = {}
 

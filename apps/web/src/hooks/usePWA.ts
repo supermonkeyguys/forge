@@ -11,7 +11,7 @@ export function usePWA(): PWAState {
   const [offlineReady, setOfflineReady] = useState(false)
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker) {
       // Listen for service worker updates
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         setNeedRefresh(true)
