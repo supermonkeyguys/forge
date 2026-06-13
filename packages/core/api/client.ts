@@ -40,7 +40,7 @@ interface ApiErrorResponse {
 
 async function request<T>(
   path: string,
-  options: RequestInit & { token?: string } = {},
+  options: RequestInit & { token?: string | undefined } = {},
 ): Promise<T> {
   const { token, ...fetchOptions } = options
 
@@ -75,27 +75,27 @@ async function request<T>(
 }
 
 export const api = {
-  get<T>(path: string, token?: string) {
+  get<T>(path: string, token?: string | undefined) {
     return request<ApiResponse<T>>(path, { method: 'GET', token })
   },
-  getList<T>(path: string, token?: string) {
+  getList<T>(path: string, token?: string | undefined) {
     return request<ApiListResponse<T>>(path, { method: 'GET', token })
   },
-  post<T>(path: string, body: unknown, token?: string) {
+  post<T>(path: string, body: unknown, token?: string | undefined) {
     return request<ApiResponse<T>>(path, {
       method: 'POST',
       body: JSON.stringify(body),
       token,
     })
   },
-  put<T>(path: string, body: unknown, token?: string) {
+  put<T>(path: string, body: unknown, token?: string | undefined) {
     return request<ApiResponse<T>>(path, {
       method: 'PUT',
       body: JSON.stringify(body),
       token,
     })
   },
-  delete(path: string, token?: string) {
+  delete(path: string, token?: string | undefined) {
     return request<void>(path, { method: 'DELETE', token })
   },
 }

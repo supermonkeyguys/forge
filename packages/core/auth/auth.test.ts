@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useAuthStore, selectToken, selectUser, selectIsAuthed } from './auth-store.js'
+import { useAuthStore, selectToken, selectUser, selectIsAuthed } from './auth-store.ts'
 
 // Reset store between tests
 beforeEach(() => {
