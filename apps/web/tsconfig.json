@@ -11,11 +11,10 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
-      "@/components": ["./src/components"],
-      "@/lib": ["./src/lib"],
-      "@/hooks": ["./src/hooks"],
+      "@/*": ["./src/*"],
       "@forge/core": ["../../packages/core"],
       "@forge/core/*": ["../../packages/core/*"],
       "@forge/ui": ["../../packages/ui"],
